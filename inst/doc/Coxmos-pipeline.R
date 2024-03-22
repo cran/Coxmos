@@ -17,6 +17,9 @@ knitr::opts_chunk$set(
 rm(dpi)
 
 ## ---- eval=FALSE--------------------------------------------------------------
+#  install.packages("Coxmos")
+
+## ---- eval=FALSE--------------------------------------------------------------
 #  install.packages("devtools")
 #  devtools::install_github("BiostatOmics/Coxmos")
 
@@ -101,7 +104,7 @@ EPV
 #                           PARALLEL = F, verbose = F, seed = 123)
 
 ## ---- eval=FALSE--------------------------------------------------------------
-#  cv.coxen_res #0.18min.
+#  cv.coxen_res
 
 ## ---- warning=F---------------------------------------------------------------
 coxen_model <- coxEN(X = X_train, Y = Y_train, 
@@ -133,7 +136,7 @@ coxen_model$nsv
 ## ---- warning=F, eval=FALSE---------------------------------------------------
 #  # run cv.plsicox
 #  cv.splsicox_res <- cv.splsicox(X = X_train, Y = Y_train,
-#                                 max.ncomp = 2, spv_penalty.list = c(0.5, 0.9),
+#                                 max.ncomp = 2, penalty.list = c(0.5, 0.9),
 #                                 n_run = 2, k_folds = 5,
 #                                 x.center = T, x.scale = F,
 #                                 remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
@@ -146,7 +149,7 @@ coxen_model$nsv
 #                                 PARALLEL = F, verbose = F, seed = 123)
 
 ## ---- eval=FALSE--------------------------------------------------------------
-#  cv.splsicox_res #1.13min.
+#  cv.splsicox_res
 
 ## ---- fig.small=T, warning=F, eval=FALSE--------------------------------------
 #  # plot cv.plsicox
@@ -155,7 +158,7 @@ coxen_model$nsv
 ## -----------------------------------------------------------------------------
 splsicox_model <- splsicox(X = X_train, Y = Y_train, 
                            n.comp = 1, #cv.splsicox_res$opt.comp, 
-                           spv_penalty = 0.9, #cv.splsicox_res$opt.spv_penalty,
+                           penalty  = 0.9, #cv.splsicox_res$opt.spv_penalty,
                            x.center = T, x.scale = F,
                            remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
                            remove_non_significant = T,
@@ -166,7 +169,7 @@ splsicox_model
 ## ---- warning==FALSE, eval=FALSE----------------------------------------------
 #  # run cv.splsdrcox
 #  cv.splsdrcox_res <- cv.splsdrcox(X = X_train, Y = Y_train,
-#                                   max.ncomp = 2, eta.list = c(0.5, 0.9),
+#                                   max.ncomp = 2, penalty.list = c(0.5, 0.9),
 #                                   n_run = 2, k_folds = 5,
 #                                   x.center = T, x.scale = F,
 #                                   remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
@@ -178,7 +181,7 @@ splsicox_model
 #                                   PARALLEL = F, verbose = F, seed = 123)
 
 ## ---- eval=FALSE--------------------------------------------------------------
-#  cv.splsdrcox_res #0.17min
+#  cv.splsdrcox_res
 
 ## ---- fig.small=T, warning=F, eval=FALSE--------------------------------------
 #  # plot cv.plsicox
@@ -187,7 +190,7 @@ splsicox_model
 ## -----------------------------------------------------------------------------
 splsdrcox_model <- splsdrcox(X = X_train, Y = Y_train, 
                              n.comp = 2, #cv.splsdrcox_res$opt.comp, 
-                             eta = 0.5, #cv.splsdrcox_res$opt.eta,
+                             penalty = 0.5, #cv.splsdrcox_res$opt.eta,
                              x.center = T, x.scale = F,
                              remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
                              remove_non_significant = T,
@@ -203,7 +206,8 @@ splsdrcox_model
 #                                                   n.cut_points = 10, EVAL_METHOD = "AUC",
 #                                                   n_run = 2, k_folds = 5,
 #                                                   x.center = T, x.scale = F,
-#                                                   remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
+#                                                   remove_near_zero_variance = T, remove_zero_variance = F,
+#                                                   toKeep.zv = NULL,
 #                                                   remove_non_significant_models = F, alpha = 0.05,
 #                                                   remove_variance_at_fold_level = F, remove_non_significant = F,
 #                                                   w_AIC = 0, w_c.index = 0, w_AUC = 1, w_BRIER = 0,
@@ -214,7 +218,7 @@ splsdrcox_model
 #                                                   PARALLEL = F, verbose = F, seed = 123)
 
 ## ---- eval=FALSE--------------------------------------------------------------
-#  cv.splsdrcox_dynamic_res #0.7mins
+#  cv.splsdrcox_dynamic_res
 
 ## -----------------------------------------------------------------------------
 splsdrcox_dynamic_model <- splsdrcox_dynamic(X = X_train, Y = Y_train, 
@@ -238,7 +242,8 @@ splsdrcox_dynamic_model
 #                                                   n.cut_points = 10, EVAL_METHOD = "AUC",
 #                                                   n_run = 2, k_folds = 5,
 #                                                   x.center = T, x.scale = F,
-#                                                   remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
+#                                                   remove_near_zero_variance = T, remove_zero_variance = F,
+#                                                   toKeep.zv = NULL,
 #                                                   remove_variance_at_fold_level = F, remove_non_significant = F,
 #                                                   remove_non_significant_models = F, alpha = 0.05,
 #                                                   w_AIC = 0, w_c.index = 0, w_AUC = 1, w_BRIER = 0,
@@ -249,7 +254,7 @@ splsdrcox_dynamic_model
 #                                                   PARALLEL = F, verbose = F, seed = 123)
 
 ## ---- eval=FALSE, eval=FALSE--------------------------------------------------
-#  cv.splsdacox_dynamic_res #0.7min
+#  cv.splsdacox_dynamic_res
 
 ## -----------------------------------------------------------------------------
 splsdacox_dynamic_model <- splsdacox_dynamic(X = X_train, Y = Y_train, 

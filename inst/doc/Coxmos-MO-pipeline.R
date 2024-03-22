@@ -83,7 +83,7 @@ x.scale = c(mirna = F, proteomic = F) #if vector, must be named
 
 ## ----warning=T, eval=F--------------------------------------------------------
 #  cv.sb.splsicox_res <- cv.sb.splsicox(X = X_train, Y = Y_train,
-#                                       max.ncomp = 2, spv_penalty.list = c(0.5,0.9),
+#                                       max.ncomp = 2, penalty.list = c(0.5,0.9),
 #                                       n_run = 2, k_folds = 5,
 #                                       x.center = x.center, x.scale = x.scale,
 #                                       remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
@@ -95,7 +95,7 @@ x.scale = c(mirna = F, proteomic = F) #if vector, must be named
 #                                       MIN_EPV = 5, return_models = F, remove_non_significant = F, returnData = F,
 #                                       PARALLEL = F, verbose = F, seed = 123)
 #  
-#  cv.sb.splsicox_res #3.2min
+#  cv.sb.splsicox_res
 
 ## ---- fig.small=T, eval=F-----------------------------------------------------
 #  cv.sb.splsicox_res$plot_AUC
@@ -103,7 +103,7 @@ x.scale = c(mirna = F, proteomic = F) #if vector, must be named
 ## -----------------------------------------------------------------------------
 sb.splsicox_model <- sb.splsicox(X = X_train, Y = Y_train,
                                  n.comp = 1, #cv.sb.splsicox_res$opt.comp, 
-                                 spv_penalty = 0.9, #cv.sb.splsicox_res$opt.spv_penalty,
+                                 penalty = 0.9, #cv.sb.splsicox_res$opt.penalty,
                                  x.center = x.center, x.scale = x.scale,
                                  remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
                                  remove_non_significant = F, 
@@ -115,7 +115,7 @@ sb.splsicox_model
 ## -----------------------------------------------------------------------------
 sb.splsicox_model <- sb.splsicox(X = X_train, Y = Y_train,
                                  n.comp = 1, #cv.sb.splsicox_res$opt.comp,
-                                 spv_penalty = 0.9, #cv.sb.splsicox_res$opt.spv_penalty,
+                                 penalty = 0.9, #cv.sb.splsicox_res$opt.penalty,
                                  x.center = x.center, x.scale = x.scale,
                                  remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
                                  remove_non_significant = T,
@@ -126,7 +126,7 @@ sb.splsicox_model
 
 ## ---- warning=F, eval=F-------------------------------------------------------
 #  isb.splsicox_model <- cv.isb.splsicox(X = X_train, Y = Y_train,
-#                                        max.ncomp = 2, spv_penalty.list = c(0.5, 0.9),
+#                                        max.ncomp = 2, penalty.list = c(0.5, 0.9),
 #                                        n_run = 2, k_folds = 5,
 #                                        x.center = x.center, x.scale = x.scale,
 #                                        remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
@@ -138,11 +138,11 @@ sb.splsicox_model
 #                                        MIN_EPV = 5, return_models = F, remove_non_significant = T,
 #                                        PARALLEL = F, verbose = F, seed = 123)
 #  
-#  isb.splsicox_model #3.5min.
+#  isb.splsicox_model
 
 ## ---- warning=F, eval=F-------------------------------------------------------
 #  cv.sb.splsdrcox_res <- cv.sb.splsdrcox(X = X_train, Y = Y_train,
-#                                         max.ncomp = 2, eta.list = c(0.5,0.9),
+#                                         max.ncomp = 2, penalty.list = c(0.5,0.9),
 #                                         n_run = 2, k_folds = 10,
 #                                         x.center = x.center, x.scale = x.scale,
 #                                         #y.center = FALSE, y.scale = FALSE,
@@ -155,13 +155,13 @@ sb.splsicox_model
 #                                         MIN_EPV = 5, return_models = F, remove_non_significant = F, returnData = F,
 #                                         PARALLEL = F, verbose = F, seed = 123)
 #  
-#  cv.sb.splsdrcox_res #0.76min
+#  cv.sb.splsdrcox_res
 
 ## -----------------------------------------------------------------------------
 sb.splsdrcox_model <- sb.splsdrcox(X = X_train, 
                                    Y = Y_train, 
                                    n.comp = 2, #cv.sb.splsdrcox_res$opt.comp, 
-                                   eta = 0.5, #cv.sb.splsdrcox_res$opt.eta,
+                                   penalty = 0.5, #cv.sb.splsdrcox_res$opt.penalty,
                                    x.center = x.center, x.scale = x.scale,
                                    remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL, 
                                    remove_non_significant = T, alpha = 0.05, MIN_EPV = 5,
@@ -171,7 +171,7 @@ sb.splsdrcox_model
 
 ## ---- warning=F, eval=F-------------------------------------------------------
 #  isb.splsdrcox_model <- cv.isb.splsdrcox(X = X_train, Y = Y_train,
-#                                          max.ncomp = 2, eta.list = c(0.5,0.9),
+#                                          max.ncomp = 2, penalty.list = c(0.5,0.9),
 #                                          n_run = 2, k_folds = 10,
 #                                          x.center = x.center, x.scale = x.scale,
 #                                          remove_near_zero_variance = T, remove_zero_variance = F, toKeep.zv = NULL,
@@ -183,7 +183,7 @@ sb.splsdrcox_model
 #                                          MIN_EPV = 5, return_models = F, remove_non_significant = T,
 #                                          PARALLEL = F, verbose = F, seed = 123)
 #  
-#  isb.splsdrcox_model #0.8min
+#  isb.splsdrcox_model
 
 ## ---- warning=F, eval=F-------------------------------------------------------
 #  cv.mb.splsdrcox_res <- cv.mb.splsdrcox(X = X_train, Y = Y_train,
@@ -200,7 +200,7 @@ sb.splsdrcox_model
 #                                         MIN_EPV = 5, return_models = F, remove_non_significant = F, returnData = F,
 #                                         PARALLEL = F, verbose = F, seed = 123)
 #  
-#  cv.mb.splsdrcox_res #1.5min
+#  cv.mb.splsdrcox_res
 
 ## -----------------------------------------------------------------------------
 mb.splsdrcox_model <- mb.splsdrcox(X = X_train, Y = Y_train, 
@@ -231,7 +231,7 @@ mb.splsdrcox_model
 #                                         MIN_EPV = 5, return_models = F, remove_non_significant = F, returnData = F,
 #                                         PARALLEL = F, verbose = F, seed = 123)
 #  
-#  cv.mb.splsdacox_res #2min
+#  cv.mb.splsdacox_res
 
 ## -----------------------------------------------------------------------------
 mb.splsdacox_model <- mb.splsdacox(X = X_train, Y = Y_train, 
@@ -263,8 +263,7 @@ eval_results <- eval_Coxmos_models(lst_models = lst_models,
                                   PARALLEL = F)
 
 ## ---- eval=FALSE--------------------------------------------------------------
-#  lst_evaluators <- c(cenROC = "cenROC",
-#                      risksetROC = "risksetROC")
+#  lst_evaluators <- c(cenROC = "cenROC", risksetROC = "risksetROC")
 #  
 #  eval_results <- purrr::map(lst_evaluators, ~eval_Coxmos_models(lst_models = lst_models,
 #                                                                X_test = X_test, Y_test = Y_test,
@@ -369,7 +368,7 @@ variable_auc_plot_train <- plot_evaluation(variable_auc_results, evaluation = "A
 variable_auc_plot_train$lst_plots$lineplot.mean
 
 ## -----------------------------------------------------------------------------
-# ggp.simulated_beta <- plot_pseudobeta.list(lst_models = lst_models, 
+# ggp.simulated_beta <- plot_pseudobpenalty.list(lst_models = lst_models, 
 #                                            error.bar = T, onlySig = T, alpha = 0.05, 
 #                                            zero.rm = T, auto.limits = T, top = 20,
 #                                            show_percentage = T, size_percentage = 2, verbose = F)
@@ -380,7 +379,6 @@ ggp.simulated_beta <- plot_pseudobeta(model = lst_models$`SB.sPLS-DRCOX`,
                                       show_percentage = T, size_percentage = 2)
 
 ## ---- fig.small=T-------------------------------------------------------------
-#ggp.simulated_beta$`iSB.sPLS-DRCOX`$plot
 ggp.simulated_beta$plot
 
 ## ---- warning=F---------------------------------------------------------------
@@ -401,7 +399,6 @@ LST_KM_RES_LP <- getAutoKM(type = "LP",
                            only_sig = T, alpha = 0.05)
 
 ## ---- fig.small=T-------------------------------------------------------------
-#LST_KM_RES_LP$`iSB.sPLS-DRCOX`$LST_PLOTS$LP
 LST_KM_RES_LP$LST_PLOTS$LP
 
 ## -----------------------------------------------------------------------------
@@ -420,7 +417,6 @@ LST_KM_TEST_LP <- getTestKM(model = lst_models$`SB.sPLS-DRCOX`,
                             cutoff = lst_cutoff)
 
 ## -----------------------------------------------------------------------------
-#LST_KM_TEST_LP$`iSB.sPLS-DRCOX`
 LST_KM_TEST_LP
 
 ## ---- warning=F---------------------------------------------------------------
@@ -441,9 +437,6 @@ LST_KM_RES_COMP <- getAutoKM(type = "COMP",
                              only_sig = T, alpha = 0.05)
 
 ## ---- fig.small=T-------------------------------------------------------------
-# LST_KM_RES_COMP$`iSB.sPLS-DRCOX`$LST_PLOTS$proteomic$comp_1
-# LST_KM_RES_COMP$`iSB.sPLS-DRCOX`$LST_PLOTS$proteomic$comp_2
-
 LST_KM_RES_COMP$LST_PLOTS$mirna$comp_2
 LST_KM_RES_COMP$LST_PLOTS$proteomic$comp_1
 LST_KM_RES_COMP$LST_PLOTS$proteomic$comp_2
@@ -464,9 +457,6 @@ LST_KM_TEST_COMP <- getTestKM(model = lst_models$`SB.sPLS-DRCOX`,
                               cutoff = lst_cutoff)
 
 ## ---- fig.small=T-------------------------------------------------------------
-# LST_KM_TEST_COMP$`iSB.sPLS-DRCOX`$comp_1_proteomic
-# LST_KM_TEST_COMP$`iSB.sPLS-DRCOX`$comp_2_proteomic
-
 LST_KM_TEST_COMP$comp_2_mirna
 LST_KM_TEST_COMP$comp_1_proteomic
 LST_KM_TEST_COMP$comp_2_proteomic
@@ -489,10 +479,6 @@ LST_KM_RES_VAR <- getAutoKM(type = "VAR",
                             only_sig = T, alpha = 0.05)
 
 ## ---- fig.small=T-------------------------------------------------------------
-# LST_KM_RES_VAR$`iSB.sPLS-DRCOX`$LST_PLOTS$mirna$`hsa-miR-21-5p`
-# LST_KM_RES_VAR$`iSB.sPLS-DRCOX`$LST_PLOTS$proteomic$`840`
-# LST_KM_RES_VAR$`iSB.sPLS-DRCOX`$LST_PLOTS$proteomic$`3897`
-
 LST_KM_RES_VAR$LST_PLOTS$mirna$`hsa-miR-21-5p`
 LST_KM_RES_VAR$LST_PLOTS$proteomic$`840`
 LST_KM_RES_VAR$LST_PLOTS$proteomic$`7535`
@@ -513,10 +499,6 @@ LST_KM_TEST_VAR <- getTestKM(model = lst_models$`SB.sPLS-DRCOX`,
                              cutoff = lst_cutoff)
 
 ## ---- fig.small=T-------------------------------------------------------------
-# LST_KM_TEST_VAR$`iSB.sPLS-DRCOX`$mirna$`hsa-miR-21-5p`
-# LST_KM_TEST_VAR$`iSB.sPLS-DRCOX`$proteomic$`840`
-# LST_KM_TEST_VAR$`iSB.sPLS-DRCOX`$proteomic$`7535`
-
 LST_KM_TEST_VAR$mirna$`hsa-miR-21-5p`
 LST_KM_TEST_VAR$proteomic$`840`
 LST_KM_TEST_VAR$proteomic$`7535`
@@ -543,8 +525,6 @@ ggp.simulated_beta_newPat <- plot_pseudobeta_newObservation(model = lst_models$`
                                                         zero.rm = T, auto.limits = T, show.betas = T, top = 20)
 
 ## ---- fig.small=T-------------------------------------------------------------
-# ggp.simulated_beta_newPat$`iSB.sPLS-DRCOX`$plot$proteomic
-
 ggp.simulated_beta_newPat$plot$mirna
 ggp.simulated_beta_newPat$plot$proteomic
 
@@ -572,7 +552,6 @@ for(b in names(X_test)){
   sub_X_test[[b]] <- X_test[[b]][1:5,]
 }
 
-
 ## -----------------------------------------------------------------------------
 knitr::kable(Y_test[rownames(sub_X_test$proteomic),])
 
@@ -588,6 +567,5 @@ lst_cox.comparison <- plot_LP.multipleObservations(model = lst_models$`SB.sPLS-D
                                                    alpha = 0.05, top = 5)
 
 ## ---- fig.small=T-------------------------------------------------------------
-# lst_cox.comparison$`iSB.sPLS-DRCOX`$plot
 lst_cox.comparison$plot
 
