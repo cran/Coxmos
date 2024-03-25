@@ -274,11 +274,11 @@ eval_results <- eval_Coxmos_models(lst_models = lst_models,
 #                                                                PARALLEL = F))
 
 ## -----------------------------------------------------------------------------
-eval_results$cenROC
+eval_results
 
 ## ---- warning=F---------------------------------------------------------------
-lst_eval_results <- plot_evaluation(eval_results$cenROC, evaluation = "AUC")
-lst_eval_results_brier <- plot_evaluation(eval_results$cenROC, evaluation = "Brier")
+lst_eval_results <- plot_evaluation(eval_results, evaluation = "AUC")
+lst_eval_results_brier <- plot_evaluation(eval_results, evaluation = "Brier")
 
 ## ---- fig.small=T, warning=F--------------------------------------------------
 lst_eval_results$lst_plots$lineplot.mean

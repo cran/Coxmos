@@ -1,6 +1,6 @@
 Package: Coxmos
 Title: Cox MultiBlock Survival
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: 
     c(person("Pedro", "Salguero García", , "pedrosalguerog@gmail.com", role = c("aut", "cre", "rev"),
            comment = c(ORCID = "0000-0002-1879-3374")),
@@ -43,7 +43,7 @@ RdMacros: Rdpack
 LazyData: true
 NeedsCompilation: yes
 VignetteBuilder: knitr
-Packaged: 2024-03-22 16:25:33 UTC; Ps
+Packaged: 2024-03-22 18:01:35 UTC; Ps
 Author: Pedro Salguero García [aut, cre, rev]
     (<https://orcid.org/0000-0002-1879-3374>),
   Sonia Tarazona Campos [ths],
@@ -53,4 +53,4 @@ Author: Pedro Salguero García [aut, cre, rev]
   Marta Sestelo [ctb],
   Artur Araújo [ctb]
 Repository: CRAN
-Date/Publication: 2024-03-22 17:10:02 UTC
+Date/Publication: 2024-03-25 20:32:38 UTC
