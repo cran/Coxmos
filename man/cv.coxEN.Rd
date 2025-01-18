@@ -8,7 +8,7 @@ cv.coxEN(
   X,
   Y,
   EN.alpha.list = seq(0, 1, 0.1),
-  max.variables = 15,
+  max.variables = NULL,
   n_run = 3,
   k_folds = 10,
   x.center = TRUE,
@@ -53,7 +53,8 @@ validation. EN.alpha = 1 is the lasso penalty, and EN.alpha = 0 the ridge penalt
 (default: seq(0,1,0.1)).}
 
 \item{max.variables}{Numeric. Maximum number of variables you want to keep in the cox model. If
-MIN_EPV is not meet, the value will be change automatically (default: 20).}
+NULL, the number of columns of X matrix is selected. When MIN_EPV is not meet, the value will be
+change automatically (default: NULL).}
 
 \item{n_run}{Numeric. Number of runs for cross validation (default: 3).}
 
@@ -73,7 +74,7 @@ be removed (default: TRUE).}
 filtering (default: NULL).}
 
 \item{remove_variance_at_fold_level}{Logical. If remove_variance_at_fold_level = TRUE, (near) zero
-variance will be removed at fold level (default: FALSE).}
+variance will be removed at fold level. Not recommended. (default: FALSE).}
 
 \item{remove_non_significant_models}{Logical. If remove_non_significant_models = TRUE,
 non-significant models are removed before computing the evaluation. A non-significant model is a
@@ -203,9 +204,11 @@ cross-validated models.
 \examples{
 data("X_proteomic")
 data("Y_proteomic")
+X_proteomic <- X_proteomic[1:30,1:40]
+Y_proteomic <- Y_proteomic[1:30,]
 set.seed(123)
 index_train <- caret::createDataPartition(Y_proteomic$event, p = .5, list = FALSE, times = 1)
-X_train <- X_proteomic[index_train,1:50]
+X_train <- X_proteomic[index_train,]
 Y_train <- Y_proteomic[index_train,]
 cv.coxEN_model <- cv.coxEN(X_train, Y_train, EN.alpha.list = c(0.1,0.5),
 x.center = TRUE, x.scale = TRUE)

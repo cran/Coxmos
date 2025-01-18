@@ -41,7 +41,7 @@ cv.sb.splsicox(
 )
 }
 \arguments{
-\item{X}{Numeric matrix or data.frame. Explanatory variables. Qualitative variables must be
+\item{X}{List of numeric matrices or data.frames. Explanatory variables. Qualitative variables must be
 transform into binary variables.}
 
 \item{Y}{Numeric matrix or data.frame. Response variables. Object must have two columns named as
@@ -73,7 +73,7 @@ be removed (default: TRUE).}
 filtering (default: NULL).}
 
 \item{remove_variance_at_fold_level}{Logical. If remove_variance_at_fold_level = TRUE, (near) zero
-variance will be removed at fold level (default: FALSE).}
+variance will be removed at fold level. Not recommended. (default: FALSE).}
 
 \item{remove_non_significant_models}{Logical. If remove_non_significant_models = TRUE,
 non-significant models are removed before computing the evaluation.}

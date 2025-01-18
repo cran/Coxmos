@@ -2,6 +2,7 @@ checkColnamesIllegalChars.mb <- function(X){
 
   for(block in names(X)){
     new_cn_X <- deleteIllegalChars(colnames(X[[block]]))
+    new_cn_X <- transformIllegalChars(new_cn_X)
 
     if(length(unique(new_cn_X)) == length(unique(colnames(X[[block]])))){
       colnames(X[[block]]) <- new_cn_X
@@ -28,7 +29,7 @@ checkColnamesIllegalChars.mb <- function(X){
 #' binary values, delineating censored (either 0 or FALSE) and event (either 1 or TRUE) observations.
 #' To ensure the integrity of the data and the precision of the computation, the function is equipped
 #' with an error mechanism that activates if the "event" column remains undetected.
-#' @param X Numeric matrix or data.frame. Explanatory variables. Qualitative variables must be transform
+#' @param X List of numeric matrices or data.frames. Explanatory variables. Qualitative variables must be transform
 #' into binary variables.
 #' @param Y Numeric matrix or data.frame. Response variables. Object must have two columns named as
 #' "time" and "event". For event column, accepted values are: 0/1 or FALSE/TRUE for censored and event
@@ -82,7 +83,7 @@ getEPV.mb <- function(X,Y){
 #' @param remove_near_zero_variance Logical. If remove_near_zero_variance = TRUE, near zero variance
 #' variables will be removed (default: TRUE).
 #' @param remove_zero_variance Logical. If remove_zero_variance = TRUE, zero variance variables will
-#' be removed (default: TRUE).
+#' be removed (default: FALSE).
 #' @param toKeep.zv Character vector. Name of variables in X to not be deleted by (near) zero variance
 #' filtering (default: NULL).
 #' @param freqCut Numeric. Cutoff for the ratio of the most common value to the second most common
@@ -102,16 +103,21 @@ getEPV.mb <- function(X,Y){
 #' X <- X_multiomic
 #' filter <- deleteZeroOrNearZeroVariance.mb(X, remove_near_zero_variance = TRUE)
 
-deleteZeroOrNearZeroVariance.mb <- function(X, remove_near_zero_variance = FALSE,
-                                            remove_zero_variance = TRUE,
+deleteZeroOrNearZeroVariance.mb <- function(X, remove_near_zero_variance = TRUE,
+                                            remove_zero_variance = FALSE,
                                             toKeep.zv = NULL, freqCut = 95/5){
 
   auxX <- X
-
   variablesDeleted <- NULL
+  perc_unique_values <- NULL
+
   if(remove_near_zero_variance){
     lst.zv <- purrr::map(auxX, ~deleteZeroVarianceVariables(data = ., info = TRUE, mustKeep = toKeep.zv, freqCut = freqCut))
+
+    #deleteZeroVarianceVariables(data = auxX$rnaseq, info = TRUE, mustKeep = toKeep.zv, freqCut = freqCut)
+
     variablesDeleted <- purrr::map(lst.zv, ~.$variablesDeleted[,1])
+    perc_unique_values <- purrr::map(lst.zv, ~.$perc_unique_values[,2,drop=F])
     if(any(unlist(lapply(variablesDeleted, is.null)))){ #if any not null
       for(n in names(variablesDeleted)){
         if(is.null(variablesDeleted[[n]])){
@@ -124,6 +130,7 @@ deleteZeroOrNearZeroVariance.mb <- function(X, remove_near_zero_variance = FALSE
   }else if(remove_zero_variance){
     lst.zv <- purrr::map(auxX, ~deleteZeroVarianceVariables(data = ., info = TRUE, mustKeep = toKeep.zv, onlyZero = TRUE))
     variablesDeleted <- purrr::map(lst.zv, ~.$variablesDeleted[,1])
+    perc_unique_values <- purrr::map(lst.zv, ~.$perc_unique_values[,2,drop=F])
     if(any(unlist(lapply(variablesDeleted, is.null)))){ #if any not null
       for(n in names(variablesDeleted)){
         if(is.null(variablesDeleted[[n]])){
@@ -135,7 +142,7 @@ deleteZeroOrNearZeroVariance.mb <- function(X, remove_near_zero_variance = FALSE
     }
   }
 
-  return(list(X = auxX, variablesDeleted = variablesDeleted))
+  return(list(X = auxX, variablesDeleted = variablesDeleted, perc_unique_values = perc_unique_values))
 
 }
 
@@ -181,7 +188,7 @@ deleteNearZeroCoefficientOfVariation.mb <- function(X, LIMIT = 0.1){
   newX <- X
   for(b in names(newX)){
     cvar <- apply(newX[[b]], 2, function(x){sd(x)/abs(mean(x))})
-    variablesDeleted[[b]] <- names(cvar)[which(cvar <= LIMIT)]
+    variablesDeleted[[b]] <- names(cvar)[which(cvar < LIMIT)]
     if(length(variablesDeleted[[b]])>0){
       newX[[b]] <- newX[[b]][,!colnames(newX[[b]]) %in% variablesDeleted[[b]]]
     }else{
@@ -190,9 +197,15 @@ deleteNearZeroCoefficientOfVariation.mb <- function(X, LIMIT = 0.1){
     coef_list[[b]] <- cvar
   }
 
-  variablesDeleted <- purrr::map(variablesDeleted, ~{.==0;NULL})
-
   return(list("X" = newX, "variablesDeleted" = variablesDeleted, "coeff_variation" = coef_list))
+}
+
+checkX.colnames.mb <- function(X){
+  for(b in names(X)){
+    if(is.null(colnames(X[[b]]))){
+      stop("X matrix/data.frame must contain colnames in all of its blocks.")
+    }
+  }
 }
 
 checkXY.rownames.mb <- function(X, Y, verbose = TRUE){
@@ -291,7 +304,7 @@ check.mb.maxPredictors <- function(X, Y, MIN_EPV, max.variables, verbose = FALSE
   }
 
   message(paste0("As we are working with a multiblock approach with ", length(X),
-                 " blocks, a maximum of ", round(max_n_predictors/length(X)), " components could be use."))
+                 " blocks, a maximum of ", round(max_n_predictors/length(X)), " components can be used."))
 
   max_n_predictors = round(max_n_predictors/length(X))
 
@@ -344,9 +357,16 @@ splitData_Iterations_Folds.mb <- function(X, Y, n_run, k_folds, seed = 123){
   lst_obs_index_test <- list()
 
   for(i in 1:n_run){
-    testIndex <- caret::createFolds(Y[,"event"],
-                                     k = k_folds,
-                                     list = TRUE)
+
+    if(length(unique(Y[,"event"]))==1){
+      testIndex <- caret::createFolds(y = Y[,"time"],
+                                      k = k_folds,
+                                      list = TRUE)
+    }else{
+      testIndex <- caret::createFolds(y = Y[,"event"],
+                                      k = k_folds,
+                                      list = TRUE)
+    }
 
     #for each fold, take the others as train
     lst_X_data_train_aux <- purrr::map(X, ~lapply(testIndex, function(ind, dat) dat[-ind,], dat = .))
@@ -547,7 +567,7 @@ getVarExpModel_block.spls <- function(Xh, DR_coxph_ori, n.comp, keepX, scale = F
 }
 
 getBestVectorMB <- function(Xh, DR_coxph = NULL, Yh, n.comp, max.iter, vector, MIN_AUC_INCREASE,
-                            MIN_NVAR = 10, MAX_NVAR = 10000, cut_points = 5, EVAL_METHOD = "AUC",
+                            MIN_NVAR = 1, MAX_NVAR = NULL, cut_points = 5, EVAL_METHOD = "AUC",
                             EVAL_EVALUATOR = "cenROC", PARALLEL = FALSE, mode = "spls", times = NULL,
                             max_time_points = 15, verbose = FALSE){
 
@@ -560,10 +580,22 @@ getBestVectorMB <- function(Xh, DR_coxph = NULL, Yh, n.comp, max.iter, vector, M
   }
 
   max_ncol <- purrr::map(Xh, ~ncol(.))
+  if(is.null(MAX_NVAR)){
+    MAX_NVAR <- max_ncol
+  }
+
+  if(!length(MAX_NVAR) == length(names(Xh))){
+    MAX_NVAR <- rep(MAX_NVAR[[1]], length(names(Xh)))
+    names(MAX_NVAR) <- names(Xh)
+  }
+  if(!length(MIN_NVAR) == length(names(Xh))){
+    MIN_NVAR <- rep(MIN_NVAR[[1]], length(names(Xh)))
+    names(MIN_NVAR) <- names(Xh)
+  }
 
   if(is.null(vector)){
     #vector <- purrr::map(names(Xh), ~c(min(MIN_NVAR, max_ncol[[.]]), (max_ncol[[.]]+min(MIN_NVAR, max_ncol[[.]]))/2, min(max_ncol[[.]], MAX_NVAR)))
-    vector <- purrr::map(names(Xh), ~getVectorCuts(vector = c(min(MIN_NVAR, max_ncol[[.]]):min(max_ncol[[.]], MAX_NVAR)), cut_points = cut_points, verbose = verbose))
+    vector <- purrr::map(names(Xh), ~getVectorCuts(vector = c(min(MIN_NVAR[[.]], max_ncol[[.]]):min(max_ncol[[.]], MAX_NVAR[[.]])), cut_points = cut_points, verbose = verbose))
     names(vector) <- names(Xh)
   }else{
     #check vector is a list, and each value is less than the max.variables of that block
@@ -859,4 +891,49 @@ getBestVectorMB <- function(Xh, DR_coxph = NULL, Yh, n.comp, max.iter, vector, M
 
   keepX <- best_keepX
   return(list(best.keepX = keepX, p_val = p_val))
+}
+
+#' getDesign.MB
+#' @description Computes a new design matrix for the multi-block data by running individual PLS
+#' between all omics and calculating its correlation.
+#'
+#' @details The `getDesign.MB` function follows the suggestion made by the mixOmics group
+#' for computing design matrices for their algorithms. For more information, check
+#' https://mixomicsteam.github.io/mixOmics-Vignette/id_06.html#id_06:diablo-design.
+#'
+#' @param Xh List of explanatory blocks.
+#' @return A design matrix optimized for the X multi-omic data.
+#'
+#' @author Pedro Salguero Garcia. Maintainer: pedsalga@upv.edu.es
+#'
+#' @export
+#'
+#' @examples
+#' data("X_multiomic")
+#' X <- X_multiomic
+#' design <- getDesign.MB(X)
+#'
+getDesign.MB <- function(Xh){
+  # set up a full design where every block is connected
+  design = matrix(1, ncol = length(Xh), nrow = length(Xh),
+                  dimnames = list(c(names(Xh)), c(names(Xh))))
+  diag(design) =  0
+
+  # AUTO DESIGN - https://mixomicsteam.github.io/mixOmics-Vignette/id_06.html#id_06:diablo-design
+  for(i in 1:(nrow(design)-1)){
+    b <- rownames(design)[[i]]
+    for(j in (i+1):nrow(design)){
+      o <- rownames(design)[[j]]
+      if(b == o){
+        design[i,j] = 0
+      }else{
+        aux_pls <- mixOmics::pls(Xh[[b]], Xh[[o]], ncomp = 1)
+        aux_cor <- cor(aux_pls$variates$X, aux_pls$variates$Y)
+        aux_cor <- round(aux_cor, 1)
+        design[i,j] <- aux_cor
+        design[j,i] <- aux_cor
+      }
+    }
+  }
+  return(design)
 }

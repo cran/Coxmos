@@ -24,7 +24,8 @@
 #' EN.alpha = 0 the ridge penalty (default: 0.5). NOTE: When ridge penalty is used, EVP and
 #' max.variables will not be used.
 #' @param max.variables Numeric. Maximum number of variables you want to keep in the cox model. If
-#' MIN_EPV is not meet, the value will be change automatically (default: 20).
+#' NULL, the number of columns of X matrix is selected. When MIN_EPV is not meet, the value will be
+#' change automatically (default: NULL).
 #' @param x.center Logical. If x.center = TRUE, X matrix is centered to zero means (default: TRUE).
 #' @param x.scale Logical. If x.scale = TRUE, X matrix is scaled to unit variances (default: FALSE).
 #' @param remove_near_zero_variance Logical. If remove_near_zero_variance = TRUE, near zero variance
@@ -114,7 +115,7 @@
 #' coxEN(X, Y, EN.alpha = 0.75, x.center = TRUE, x.scale = TRUE, remove_non_significant = TRUE)
 
 coxEN <- function(X, Y,
-                  EN.alpha = 0.5, max.variables = 15,
+                  EN.alpha = 0.5, max.variables = NULL,
                   x.center = TRUE, x.scale = FALSE,
                   remove_near_zero_variance = TRUE, remove_zero_variance = FALSE, toKeep.zv = NULL,
                   remove_non_significant = FALSE, alpha = 0.05,
@@ -128,8 +129,12 @@ coxEN <- function(X, Y,
   params_with_limits <- list("alpha" = alpha, "EN.alpha" = EN.alpha)
   check_min0_max1_variables(params_with_limits)
 
-  numeric_params <- list("max.variables" = max.variables,
-                  "MIN_EPV" = MIN_EPV)
+  numeric_params <- list("MIN_EPV" = MIN_EPV)
+
+  if(!is.null(max.variables)){
+    numeric_params$max.variables <- max.variables
+  }
+
   check_class(numeric_params, class = "numeric")
 
   logical_params <- list("x.center" = x.center, "x.scale" = x.scale,
@@ -143,7 +148,11 @@ coxEN <- function(X, Y,
   X <- lst_check$X
   Y <- lst_check$Y
 
+  #### Check colnames in X for Illegal Chars (affect cox formulas)
+  X <- checkColnamesIllegalChars(X)
+
   #### REQUIREMENTS
+  checkX.colnames(X)
   checkY.colnames(Y)
   lst_check <- checkXY.class(X, Y, verbose = verbose)
   X <- lst_check$X
@@ -186,6 +195,10 @@ coxEN <- function(X, Y,
   X_norm <- Xh
 
   #### MAX PREDICTORS
+  if(is.null(max.variables)){
+    max.variables <- ncol(X)
+  }
+
   if(EN.alpha!=0){
     max.variables <- check.ncomp(X, max.variables)
     max.variables <- check.maxPredictors(X, Y, MIN_EPV, max.variables, verbose = verbose)
@@ -262,6 +275,18 @@ coxEN <- function(X, Y,
       list(res = NA, problem = TRUE)
     }
   )
+
+  # sometimes error when just 1 variable
+  # increase until get some results
+  if(max.variables == 1 & all(EN_cox$beta[,1] %in% c(0,1))){
+    i = 1
+    while(all(EN_cox$beta[,i] %in% c(0,1))){
+      EN_cox <- glmnet::glmnet(x = Xh, y = survival::Surv(time = Yh[,"time"], event = Yh[,"event"]),
+                     family = "cox", alpha = EN.alpha, standardize = FALSE, nlambda = 300, pmax = max.variables+i)
+      i = i+1
+    }
+    message(paste0("WARNING: coxEN could not be computed for a single variable. In this case, a model with ", i, " variables is returned.\n"))
+  }
 
   #only if problems
   if(all(isa(EN_cox, "list"))){
@@ -510,7 +535,8 @@ coxEN <- function(X, Y,
 #' validation. EN.alpha = 1 is the lasso penalty, and EN.alpha = 0 the ridge penalty
 #' (default: seq(0,1,0.1)).
 #' @param max.variables Numeric. Maximum number of variables you want to keep in the cox model. If
-#' MIN_EPV is not meet, the value will be change automatically (default: 20).
+#' NULL, the number of columns of X matrix is selected. When MIN_EPV is not meet, the value will be
+#' change automatically (default: NULL).
 #' @param n_run Numeric. Number of runs for cross validation (default: 3).
 #' @param k_folds Numeric. Number of folds for cross validation (default: 10).
 #' @param x.center Logical. If x.center = TRUE, X matrix is centered to zero means (default: TRUE).
@@ -522,7 +548,7 @@ coxEN <- function(X, Y,
 #' @param toKeep.zv Character vector. Name of variables in X to not be deleted by (near) zero variance
 #' filtering (default: NULL).
 #' @param remove_variance_at_fold_level Logical. If remove_variance_at_fold_level = TRUE, (near) zero
-#' variance will be removed at fold level (default: FALSE).
+#' variance will be removed at fold level. Not recommended. (default: FALSE).
 #' @param remove_non_significant_models Logical. If remove_non_significant_models = TRUE,
 #' non-significant models are removed before computing the evaluation. A non-significant model is a
 #' model with at least one component/variable with a P-Value higher than the alpha cutoff.
@@ -602,16 +628,18 @@ coxEN <- function(X, Y,
 #' @examples
 #' data("X_proteomic")
 #' data("Y_proteomic")
+#' X_proteomic <- X_proteomic[1:30,1:40]
+#' Y_proteomic <- Y_proteomic[1:30,]
 #' set.seed(123)
 #' index_train <- caret::createDataPartition(Y_proteomic$event, p = .5, list = FALSE, times = 1)
-#' X_train <- X_proteomic[index_train,1:50]
+#' X_train <- X_proteomic[index_train,]
 #' Y_train <- Y_proteomic[index_train,]
 #' cv.coxEN_model <- cv.coxEN(X_train, Y_train, EN.alpha.list = c(0.1,0.5),
 #' x.center = TRUE, x.scale = TRUE)
 
 cv.coxEN <- function(X, Y,
                      EN.alpha.list = seq(0,1,0.1),
-                     max.variables = 15,
+                     max.variables = NULL,
                      n_run = 3, k_folds = 10,
                      x.center = TRUE, x.scale = FALSE,
                      remove_near_zero_variance = TRUE, remove_zero_variance = TRUE, toKeep.zv = NULL,
@@ -640,9 +668,14 @@ cv.coxEN <- function(X, Y,
                         "w_AIC" = w_AIC, "w_c.index" = w_c.index, "w_AUC" = w_AUC, "w_BRIER" = w_BRIER)
   check_min0_max1_variables(params_with_limits)
 
-  numeric_params <- list("EN.alpha.list" = EN.alpha.list, "max.variables" = max.variables,
+  numeric_params <- list("EN.alpha.list" = EN.alpha.list,
                   "n_run" = n_run, "k_folds" = k_folds, "max_time_points" = max_time_points,
                   "MIN_COMP_TO_CHECK" = MIN_COMP_TO_CHECK, "MIN_EPV" = MIN_EPV, "seed" = seed)
+
+  if(!is.null(max.variables)){
+    numeric_params$max.variables <- max.variables
+  }
+
   check_class(numeric_params, class = "numeric")
 
   logical_params <- list("x.center" = x.center, "x.scale" = x.scale,
@@ -675,6 +708,7 @@ cv.coxEN <- function(X, Y,
   X <- checkColnamesIllegalChars(X)
 
   #### REQUIREMENTS
+  checkX.colnames(X)
   checkY.colnames(Y)
   lst_check <- checkXY.class(X, Y, verbose = verbose)
   X <- lst_check$X
@@ -687,6 +721,10 @@ cv.coxEN <- function(X, Y,
   }
 
   #### MAX PREDICTORS
+  if(is.null(max.variables)){
+    max.variables <- ncol(X)
+  }
+
   max.variables <- check.ncomp(X, max.variables)
   max.variables <- check.maxPredictors(X, Y, MIN_EPV, max.variables, verbose = verbose)
 

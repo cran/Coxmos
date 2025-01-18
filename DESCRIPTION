@@ -1,6 +1,6 @@
 Package: Coxmos
 Title: Cox MultiBlock Survival
-Version: 1.0.2
+Version: 1.1.0
 Authors@R: 
     c(person("Pedro", "Salguero García", , "pedrosalguerog@gmail.com", role = c("aut", "cre", "rev"),
            comment = c(ORCID = "0000-0002-1879-3374")),
@@ -37,13 +37,13 @@ Depends: R (>= 4.1.0),
 Imports: caret, cowplot, furrr, future, ggrepel, ggplot2, ggpubr,
         glmnet, MASS, mixOmics, progress, purrr, Rdpack, scattermore,
         stats, survcomp, survival, survminer, svglite, tidyr, utils
-Suggests: nsROC, smoothROCtime, survivalROC, risksetROC, ggforce,
-        knitr, RColorConesa, rmarkdown
+Suggests: ggforce, grDevices, knitr, nsROC, patchwork, RColorConesa,
+        risksetROC, rmarkdown, smoothROCtime, survivalROC
 RdMacros: Rdpack
 LazyData: true
 NeedsCompilation: yes
 VignetteBuilder: knitr
-Packaged: 2024-03-22 18:01:35 UTC; Ps
+Packaged: 2025-01-18 10:55:51 UTC; Ps
 Author: Pedro Salguero García [aut, cre, rev]
     (<https://orcid.org/0000-0002-1879-3374>),
   Sonia Tarazona Campos [ths],
@@ -53,4 +53,4 @@ Author: Pedro Salguero García [aut, cre, rev]
   Marta Sestelo [ctb],
   Artur Araújo [ctb]
 Repository: CRAN
-Date/Publication: 2024-03-25 20:32:38 UTC
+Date/Publication: 2025-01-18 11:30:02 UTC

@@ -23,7 +23,7 @@
 #' available, such as centering and scaling of the explanatory variables, and removal of variables
 #' with near-zero or zero variance.
 #'
-#' @param X Numeric matrix or data.frame. Explanatory variables. Qualitative variables must be
+#' @param X List of numeric matrices or data.frames. Explanatory variables. Qualitative variables must be
 #' transform into binary variables.
 #' @param Y Numeric matrix or data.frame. Response variables. Object must have two columns named as
 #' "time" and "event". For event column, accepted values are: 0/1 or FALSE/TRUE for censored and event
@@ -32,6 +32,9 @@
 #' @param vector Numeric vector or list. Used for computing best number of variables. As many values as
 #' components have to be provided. If vector = NULL, an automatic detection is perform (default: NULL). If
 #' vector is a list, must be named as the names of X param followed by the number of variables to select.
+#' @param design Numeric matrix. Matrix of size (number of blocks in X) x (number of blocks in X) with
+#' values between 0 and 1. Each value indicates the strength of the relationship to be modeled between
+#' two blocks; a value of 0 indicates no relationship, 1 is the maximum value. If NULL, auto-design is computed (default: NULL).
 #' @param MIN_NVAR Numeric. Minimum range size for computing cut points to select the best number of
 #' variables to use (default: 10).
 #' @param MAX_NVAR Numeric. Maximum range size for computing cut points to select the best number of
@@ -39,8 +42,8 @@
 #' @param n.cut_points Numeric. Number of cut points for searching the optimal number of variables.
 #' If only two cut points are selected, minimum and maximum size are used. For MB approaches as many
 #' as n.cut_points^n.blocks models will be computed as minimum (default: 5).
-#' @param EVAL_METHOD Character. If EVAL_METHOD = "AUC", AUC metric will be use to compute the best
-#' number of variables. In other case, c-index metric will be used (default: "AUC").
+#' @param EVAL_METHOD Character. The selected metric will be use to compute the best
+#' number of variables. Must be one of the following: "AUC", "BRIER" or "c_index" (default: "AUC").
 #' @param x.center Logical. If x.center = TRUE, X matrix is centered to zero means (default: TRUE).
 #' @param x.scale Logical. If x.scale = TRUE, X matrix is scaled to unit variances (default: FALSE).
 #' @param remove_near_zero_variance Logical. If remove_near_zero_variance = TRUE, near zero variance
@@ -121,10 +124,6 @@
 #'
 #' \code{R2}: PLS R2
 #'
-#' \code{SCR}: PLS SCR
-#'
-#' \code{SCT}: PLS SCT
-#'
 #' \code{nzv}: Variables removed by remove_near_zero_variance or remove_zero_variance.
 #'
 #' \code{nz_coeffvar}: Variables removed by coefficient variation near zero.
@@ -156,8 +155,8 @@
 #' }
 
 mb.splsdacox <- function (X, Y,
-                          n.comp = 4, vector = NULL,
-                          MIN_NVAR = 10, MAX_NVAR = 10000, n.cut_points = 5, EVAL_METHOD = "AUC",
+                          n.comp = 4, vector = NULL, design = NULL,
+                          MIN_NVAR = 1, MAX_NVAR = NULL, n.cut_points = 5, EVAL_METHOD = "AUC",
                           x.center = TRUE, x.scale = FALSE,
                           remove_near_zero_variance = TRUE, remove_zero_variance = TRUE, toKeep.zv = NULL,
                           remove_non_significant = TRUE, alpha = 0.05,
@@ -175,15 +174,20 @@ mb.splsdacox <- function (X, Y,
   params_with_limits <- list("alpha" = alpha, "MIN_AUC_INCREASE" = MIN_AUC_INCREASE)
   check_min0_max1_variables(params_with_limits)
 
-  numeric_params <- list("n.comp" = n.comp, "MIN_NVAR" = MIN_NVAR, "MAX_NVAR" = MAX_NVAR, "n.cut_points" = n.cut_points,
-                  "max_time_points" = max_time_points,
-                  "MIN_EPV" = MIN_EPV, "tol" = tol, "max.iter" = max.iter)
+  numeric_params <- list("n.comp" = n.comp, "MIN_NVAR" = MIN_NVAR, "n.cut_points" = n.cut_points,
+                         "max_time_points" = max_time_points,
+                         "MIN_EPV" = MIN_EPV, "tol" = tol, "max.iter" = max.iter)
+
+  if(!is.null(MAX_NVAR)){
+    numeric_params$MAX_NVAR <- MAX_NVAR
+  }
+
   check_class(numeric_params, class = "numeric")
 
   logical_params <- list("x.center" = unlist(x.center), "x.scale" = unlist(x.scale),
                          #"y.center" = y.center, "y.scale" = y.scale,
-                      "remove_near_zero_variance" = remove_near_zero_variance, "remove_zero_variance" = remove_zero_variance,
-                      "remove_non_significant" = remove_non_significant, "returnData" = returnData, "verbose" = verbose)
+                         "remove_near_zero_variance" = remove_near_zero_variance, "remove_zero_variance" = remove_zero_variance,
+                         "remove_non_significant" = remove_non_significant, "returnData" = returnData, "verbose" = verbose)
   check_class(logical_params, class = "logical")
 
   character_params <- list("EVAL_METHOD" = EVAL_METHOD, "pred.method" = pred.method)
@@ -194,7 +198,11 @@ mb.splsdacox <- function (X, Y,
   X <- lst_check$X
   Y <- lst_check$Y
 
+  #### Check colnames
+  X <- checkColnamesIllegalChars.mb(X)
+
   #### REQUIREMENTS
+  checkX.colnames.mb(X)
   checkY.colnames(Y)
   lst_check <- checkXY.mb.class(X, Y, verbose = verbose)
   X <- lst_check$X
@@ -209,15 +217,15 @@ mb.splsdacox <- function (X, Y,
 
   #### ZERO VARIANCE - ALWAYS
   lst_dnz <- deleteZeroOrNearZeroVariance.mb(X = X,
-                                            remove_near_zero_variance = remove_near_zero_variance,
-                                            remove_zero_variance = remove_zero_variance,
-                                            toKeep.zv = toKeep.zv,
-                                            freqCut = FREQ_CUT)
+                                             remove_near_zero_variance = remove_near_zero_variance,
+                                             remove_zero_variance = remove_zero_variance,
+                                             toKeep.zv = toKeep.zv,
+                                             freqCut = FREQ_CUT)
   X <- lst_dnz$X
   variablesDeleted <- lst_dnz$variablesDeleted
 
   #### COEF VARIATION
-  lst_dnzc <- deleteNearZeroCoefficientOfVariation.mb(X = X)
+  lst_dnzc <- deleteNearZeroCoefficientOfVariation.mb(X = X, LIMIT = 0.1)
   X <- lst_dnzc$X
   variablesDeleted_cvar <- lst_dnzc$variablesDeleted
 
@@ -234,6 +242,8 @@ mb.splsdacox <- function (X, Y,
 
   #### MAX PREDICTORS
   n.comp <- check.mb.maxPredictors(X, Y, MIN_EPV, n.comp, verbose = verbose)
+  max_comps <- min(unlist(purrr::map(X, ~ncol(.))))
+  n.comp <- min(n.comp, max_comps)
 
   E <- list()
   R2 <- list()
@@ -244,13 +254,13 @@ mb.splsdacox <- function (X, Y,
   YNA <- is.na(Y) #TRUE is NA
 
   #### ### ### ### ### ### ### ### ### ### ### ##
-  ### ##         MB.sPLSDA-COX             ### ##
+  ### ##         MB.sPLS-DACOX             ### ##
   #### ### ### ### ### ### ### ### ### ### ### ##
 
-  # set up a full design where every block is connected
-  design = matrix(1, ncol = length(Xh), nrow = length(Xh),
-                  dimnames = list(c(names(Xh)), c(names(Xh))))
-  diag(design) =  0
+  # AUTO DESIGN - https://mixomicsteam.github.io/mixOmics-Vignette/id_06.html#id_06:diablo-design
+  if(is.null(design)){
+    design <- getDesign.MB(Xh)
+  }
 
   #### ### ### ### ### ### ### ### ### ###
   # DIVIDE Y VENCERAS - BEST VECTOR SIZE #
@@ -299,73 +309,25 @@ mb.splsdacox <- function (X, Y,
     }
   }
 
-  mb.splsda <- mixOmics::block.splsda(Xh, Yh[,"event"], scale = FALSE, ncomp = n.comp, keepX = keepX, max.iter = max.iter, near.zero.var = FALSE, all.outputs = TRUE)
+  mb.splsda <- mixOmics::block.splsda(Xh, Yh[,"event"], scale = FALSE, ncomp = n.comp, keepX = keepX, design = design,
+                                      max.iter = max.iter, near.zero.var = FALSE, all.outputs = TRUE)
 
   #PREDICTION
-  #both methods return same values
-  # but second with pseudo inverse matrix
-  predplsfit <- tryCatch(
-    # Specifying expression
-    # pmax - coefficients to be non-zero
-    expr = {
-      predict(mb.splsda, newdata=Xh) #mixomics
-    },
-    error = function(e){
-      if(verbose){
-        message("Predicting values using a pseudo-inverse matrix...\n")
-      }
-      # Estimation matrix W, P and C
-      predict <- list()
-      for(block in names(mb.splsda$X)){
-        if(block == "Y"){
-          next
-        }
-        Pmat = crossprod(mb.splsda$X[[block]], mb.splsda$variates[[block]])
-        Cmat = crossprod(mb.splsda$ind.mat, mb.splsda$variates[[block]]) #if DA analysis, the unmap Y is in ind.mat
-        Wmat = mb.splsda$loadings[[block]]
-        # PW <- tryCatch(expr = {MASS::ginv(t(Pmat) %*% Wmat)},
-        #                error = function(e){
-        #                  if(verbose){
-        #                    message(e$message)
-        #                  }
-        #                  NA
-        #                })
-
-        PW <- list()
-        for(i in 1:n.comp){
-          PW[[i]] <- tryCatch(expr = {MASS::ginv(t(Pmat[,1:i]) %*% Wmat[,1:i])},
-                              error = function(e){
-                                if(verbose){
-                                  message(e$message)
-                                }
-                                NA
-                              })
-        }
-
-
-        Ypred = lapply(1:n.comp, function(x){Xh[[block]] %*% Wmat[, 1:x] %*% PW[[x]] %*% t(Cmat)[1:x, ]})
-        Ypred = sapply(Ypred, function(x){x}, simplify = "array")
-        predict[[block]] = array(Ypred, c(nrow(mb.splsda$X[[block]]), ncol(mb.splsda$ind.mat), n.comp)) # in case one observation and only one Y, we need array() to keep it an array with a third dimension being ncomp
-      }
-
-      predplsfit <- list()
-      predplsfit$predict <- predict
-      predplsfit
-    }
-  )
+  predplsfit <- predict_mixOmics.mb.pls(mb.spls = mb.splsda, Xh, n.comp)
 
   for(block in names(predplsfit$predict)){
-    E[[block]] <- list()
-    SCR[[block]] <- list()
-    SCT[[block]] <- list()
+    # E[[block]] <- list()
+    # SCR[[block]] <- list()
+    # SCT[[block]] <- list()
     R2[[block]] <- list()
     for(h in 1:n.comp){
-      E[[block]][[h]] <- Yh[,"event"] - predplsfit$predict[[block]][,,h]
-
-      SCR[[block]][[h]] = sum(apply(E[[block]][[h]],2,function(x) sum(x**2)))
-      SCT[[block]][[h]] = sum(apply(as.matrix(Yh[,"event"]),2,function(x) sum(x**2))) #equivalent sum((Yh[,"event"] - mean(Yh[,"event"]))**2)
-
-      R2[[block]][[h]] = 1 - (SCR[[block]][[h]]/SCT[[block]][[h]]) #deviance residuals explanation
+      # E[[block]][[h]] <- Yh[,"event",drop=F] - predplsfit$predict[[block]][,h]
+      #
+      # SCR[[block]][[h]] = sum(apply(E[[block]][[h]],2,function(x) sum(x**2)))
+      # SCT[[block]][[h]] = sum(apply(as.matrix(Yh[,"event"]),2,function(x) sum(x**2))) #equivalent sum((Yh[,"event"] - mean(Yh[,"event"]))**2)
+      #
+      # R2[[block]][[h]] = 1 - (SCR[[block]][[h]]/SCT[[block]][[h]]) #deviance residuals explanation
+      R2[[block]][[h]] = mb.splsda$prop_expl_var[[block]][[h]] #deviance residuals explanation
     }
     R2[[block]] = mb.splsda$prop_expl_var[[block]]
   }
@@ -378,7 +340,7 @@ mb.splsdacox <- function (X, Y,
   #### ### ### ### ### ### ### ### ### ### ### #
 
   #### ### ### ### ### ### ### ### ### ### ### ###
-  ### ###         MB:sPLSDA-COX            ### ###
+  ### ###         MB:sPLS-DACOX            ### ###
   #### ### ### ### ### ### ### ### ### ### ### ###
   n.comp_used <- ncol(mb.splsda$variates$Y) #can be lesser than expected because we have lesser variables to select because penalization
 
@@ -581,6 +543,13 @@ mb.splsdacox <- function (X, Y,
     survival_model <- removeInfoSurvivalModel(survival_model)
   }
 
+  all_scores <- NULL
+  for(b in names(Ts)){
+    aux_scores <- Ts[[b]]
+    colnames(aux_scores) <- paste0(colnames(aux_scores), "_", b)
+    all_scores <- cbind(all_scores, aux_scores)
+  }
+
   t2 <- Sys.time()
   time <- difftime(t2,t1,units = "mins")
 
@@ -590,6 +559,7 @@ mb.splsdacox <- function (X, Y,
                                           "weightings" = if(returnData) W else NA,
                                           "W.star" = W.star,
                                           "scores" = Ts,
+                                          "scores_all" = all_scores,
                                           "E" = if(returnData) E else NA,
                                           "x.mean" = xmeans, "x.sd" = xsds),
                                  Y = list("data" = Yh,
@@ -603,8 +573,8 @@ mb.splsdacox <- function (X, Y,
                                  Y_input = if(returnData) Y_original else NA,
                                  B.hat = B.hat,
                                  R2 = R2,
-                                 SCR = SCR,
-                                 SCT = SCT,
+                                 # SCR = SCR,
+                                 # SCT = SCT,
                                  alpha = alpha,
                                  nsv = removed_variables,
                                  nzv = variablesDeleted,
@@ -642,7 +612,7 @@ mb.splsdacox <- function (X, Y,
 #' option to expedite the cross-validation process, especially beneficial for large datasets. However,
 #' users should be cautious about potential high RAM consumption when using this option.
 #'
-#' @param X Numeric matrix or data.frame. Explanatory variables. Qualitative variables must be
+#' @param X List of numeric matrices or data.frames. Explanatory variables. Qualitative variables must be
 #' transform into binary variables.
 #' @param Y Numeric matrix or data.frame. Response variables. Object must have two columns named as
 #' "time" and "event". For event column, accepted values are: 0/1 or FALSE/TRUE for censored and
@@ -652,14 +622,17 @@ mb.splsdacox <- function (X, Y,
 #' @param vector Numeric vector. Used for computing best number of variables. As many values as
 #' components have to be provided. If vector = NULL, an automatic detection is perform (default: NULL). If
 #' vector is a list, must be named as the names of X param followed by the number of variables to select.
+#' @param design Numeric matrix. Matrix of size (number of blocks in X) x (number of blocks in X) with
+#' values between 0 and 1. Each value indicates the strength of the relationship to be modeled between
+#' two blocks; a value of 0 indicates no relationship, 1 is the maximum value. If NULL, auto-design is computed (default: NULL).
 #' @param MIN_NVAR Numeric. Minimum range size for computing cut points to select the best number of
 #' variables to use (default: 10).
 #' @param MAX_NVAR Numeric. Maximum range size for computing cut points to select the best number of
 #' variables to use (default: 1000).
 #' @param n.cut_points Numeric. Number of cut points for searching the optimal number of variables.
 #' If only two cut points are selected, minimum and maximum size are used (default: 5).
-#' @param EVAL_METHOD Character. If EVAL_METHOD = "AUC", AUC metric will be use to compute the best
-#' number of variables. In other case, c-index metric will be used (default: "AUC").
+#' @param EVAL_METHOD Character. The selected metric will be use to compute the best
+#' number of variables. Must be one of the following: "AUC", "BRIER" or "c_index" (default: "AUC").
 #' @param n_run Numeric. Number of runs for cross validation (default: 3).
 #' @param k_folds Numeric. Number of folds for cross validation (default: 10).
 #' @param x.center Logical. If x.center = TRUE, X matrix is centered to zero means (default: TRUE).
@@ -671,7 +644,7 @@ mb.splsdacox <- function (X, Y,
 #' @param toKeep.zv Character vector. Name of variables in X to not be deleted by (near) zero variance
 #' filtering (default: NULL).
 #' @param remove_variance_at_fold_level Logical. If remove_variance_at_fold_level = TRUE, (near) zero
-#' variance will be removed at fold level (default: FALSE).
+#' variance will be removed at fold level. Not recommended. (default: FALSE).
 #' @param remove_non_significant_models Logical. If remove_non_significant_models = TRUE,
 #' non-significant models are removed before computing the evaluation. A non-significant model is a
 #' model with at least one component/variable with a P-Value higher than the alpha cutoff.
@@ -732,6 +705,7 @@ mb.splsdacox <- function (X, Y,
 #'
 #' \code{opt.comp}: Optimal component selected by the best_model.
 #' \code{opt.nvar}: Optimal number of variables selected by the best_model.
+#' \code{design}: Design matrix used for computing the MultiBlocks models.
 #'
 #' \code{plot_AIC}: AIC plot by each hyper-parameter.
 #' \code{plot_c_index}: C-Index plot by each hyper-parameter.
@@ -766,8 +740,8 @@ mb.splsdacox <- function (X, Y,
 #' }
 
 cv.mb.splsdacox <- function(X, Y,
-                            max.ncomp = 8, vector = NULL,
-                            MIN_NVAR = 10, MAX_NVAR = 10000, n.cut_points = 5, EVAL_METHOD = "AUC",
+                            max.ncomp = 8, vector = NULL, design = NULL,
+                            MIN_NVAR = 10, MAX_NVAR = NULL, n.cut_points = 5, EVAL_METHOD = "AUC",
                             n_run = 3, k_folds = 10,
                             x.center = TRUE, x.scale = FALSE,
                             remove_near_zero_variance = TRUE, remove_zero_variance = TRUE, toKeep.zv = NULL,
@@ -795,21 +769,26 @@ cv.mb.splsdacox <- function(X, Y,
 
   #### Check values classes and ranges
   params_with_limits <- list("MIN_AUC_INCREASE" = MIN_AUC_INCREASE, "MIN_AUC" = MIN_AUC, "alpha" = alpha,
-                 "w_AIC" = w_AIC, "w_c.index" = w_c.index, "w_AUC" = w_AUC, "w_BRIER" = w_BRIER)
+                             "w_AIC" = w_AIC, "w_c.index" = w_c.index, "w_AUC" = w_AUC, "w_BRIER" = w_BRIER)
   check_min0_max1_variables(params_with_limits)
 
-  numeric_params <- list("max.ncomp" = max.ncomp, "MIN_NVAR" = MIN_NVAR, "MAX_NVAR" = MAX_NVAR, "n.cut_points" = n.cut_points,
-                  "n_run" = n_run, "k_folds" = k_folds, "max_time_points" = max_time_points,
-                  "MIN_COMP_TO_CHECK" = MIN_COMP_TO_CHECK, "MIN_EPV" = MIN_EPV, "seed" = seed, "tol" = tol)
+  numeric_params <- list("max.ncomp" = max.ncomp, "MIN_NVAR" = MIN_NVAR, "n.cut_points" = n.cut_points,
+                         "n_run" = n_run, "k_folds" = k_folds, "max_time_points" = max_time_points,
+                         "MIN_COMP_TO_CHECK" = MIN_COMP_TO_CHECK, "MIN_EPV" = MIN_EPV, "seed" = seed, "tol" = tol)
+
+  if(!is.null(MAX_NVAR)){
+    numeric_params$MAX_NVAR <- MAX_NVAR
+  }
+
   check_class(numeric_params, class = "numeric")
 
   logical_params <- list("x.center" = unlist(x.center), "x.scale" = unlist(x.scale),
                          #"y.center" = y.center, "y.scale" = y.scale,
-                      "remove_near_zero_variance" = remove_near_zero_variance, "remove_zero_variance" = remove_zero_variance,
-                      "remove_variance_at_fold_level" = remove_variance_at_fold_level,
-                      "remove_non_significant_models" = remove_non_significant_models,
-                      "remove_non_significant" = remove_non_significant,
-                      "return_models" = return_models,"returnData" = returnData, "verbose" = verbose, "PARALLEL" = PARALLEL)
+                         "remove_near_zero_variance" = remove_near_zero_variance, "remove_zero_variance" = remove_zero_variance,
+                         "remove_variance_at_fold_level" = remove_variance_at_fold_level,
+                         "remove_non_significant_models" = remove_non_significant_models,
+                         "remove_non_significant" = remove_non_significant,
+                         "return_models" = return_models,"returnData" = returnData, "verbose" = verbose, "PARALLEL" = PARALLEL)
   check_class(logical_params, class = "logical")
 
   character_params <- list("EVAL_METHOD" = EVAL_METHOD, "pred.attr" = pred.attr, "pred.method" = pred.method)
@@ -829,6 +808,7 @@ cv.mb.splsdacox <- function(X, Y,
   X <- checkColnamesIllegalChars.mb(X)
 
   #### REQUIREMENTS
+  checkX.colnames.mb(X)
   checkY.colnames(Y)
   lst_check <- checkXY.mb.class(X, Y, verbose = verbose)
 
@@ -866,7 +846,15 @@ cv.mb.splsdacox <- function(X, Y,
   max.ncomp <- check.mb.ncomp(X, max.ncomp)
   max.ncomp <- check.mb.maxPredictors(X, Y, MIN_EPV, max.ncomp, verbose = verbose)
   if(MIN_COMP_TO_CHECK >= max.ncomp){
-    MIN_COMP_TO_CHECK = max.ncomp-1
+    MIN_COMP_TO_CHECK = max(max.ncomp-1, 1)
+  }
+
+  # AUTO DESIGN - https://mixomicsteam.github.io/mixOmics-Vignette/id_06.html#id_06:diablo-design
+  if(is.null(design)){
+    #### SCALING
+    lst_scale <- XY.mb.scale(X, Y, x.center, x.scale, y.center, y.scale)
+    Xh <- lst_scale$Xh
+    design <- getDesign.MB(Xh)
   }
 
   #### #
@@ -895,7 +883,7 @@ cv.mb.splsdacox <- function(X, Y,
   comp_model_lst <- get_Coxmos_models2.0(method = pkg.env$mb.splsdacox,
                                          X_train = X, Y_train = Y,
                                          lst_X_train = lst_train_indexes, lst_Y_train = lst_train_indexes,
-                                         max.ncomp = max.ncomp, penalty.list = NULL, EN.alpha.list = NULL, max.variables = NULL, vector = vector,
+                                         max.ncomp = max.ncomp, penalty.list = NULL, EN.alpha.list = NULL, max.variables = NULL, vector = vector, design = design,
                                          n_run = n_run, k_folds = k_folds,
                                          MIN_NVAR = MIN_NVAR, MAX_NVAR = MAX_NVAR, MIN_AUC_INCREASE = MIN_AUC_INCREASE, EVAL_METHOD = EVAL_METHOD,
                                          n.cut_points = n.cut_points,
@@ -1067,9 +1055,9 @@ cv.mb.splsdacox <- function(X, Y,
 
   # invisible(gc())
   if(return_models){
-    return(cv.mb.splsdacox_class(list(best_model_info = best_model_info, df_results_folds = df_results_evals_fold, df_results_runs = df_results_evals_run, df_results_comps = df_results_evals_comp, lst_models = comp_model_lst, pred.method = pred.method, opt.comp = best_model_info$n.comps, opt.nvar = best_n_var, plot_AIC = ggp_AIC, plot_c_index = ggp_c_index, plot_BRIER = ggp_BRIER, plot_AUC = ggp_AUC, class = pkg.env$cv.mb.splsdacox, lst_train_indexes = lst_train_indexes, lst_test_indexes = lst_test_indexes, time = time)))
+    return(cv.mb.splsdacox_class(list(best_model_info = best_model_info, df_results_folds = df_results_evals_fold, df_results_runs = df_results_evals_run, df_results_comps = df_results_evals_comp, lst_models = comp_model_lst, pred.method = pred.method, opt.comp = best_model_info$n.comps, opt.nvar = best_n_var, design = design, plot_AIC = ggp_AIC, plot_c_index = ggp_c_index, plot_BRIER = ggp_BRIER, plot_AUC = ggp_AUC, class = pkg.env$cv.mb.splsdacox, lst_train_indexes = lst_train_indexes, lst_test_indexes = lst_test_indexes, time = time)))
   }else{
-    return(cv.mb.splsdacox_class(list(best_model_info = best_model_info, df_results_folds = df_results_evals_fold, df_results_runs = df_results_evals_run, df_results_comps = df_results_evals_comp, lst_models = NULL, pred.method = pred.method, opt.comp = best_model_info$n.comps, opt.nvar = best_n_var, plot_AIC = ggp_AIC, plot_c_index = ggp_c_index, plot_BRIER = ggp_BRIER, plot_AUC = ggp_AUC, class = pkg.env$cv.mb.splsdacox, lst_train_indexes = lst_train_indexes, lst_test_indexes = lst_test_indexes, time = time)))
+    return(cv.mb.splsdacox_class(list(best_model_info = best_model_info, df_results_folds = df_results_evals_fold, df_results_runs = df_results_evals_run, df_results_comps = df_results_evals_comp, lst_models = NULL, pred.method = pred.method, opt.comp = best_model_info$n.comps, opt.nvar = best_n_var, design = design, plot_AIC = ggp_AIC, plot_c_index = ggp_c_index, plot_BRIER = ggp_BRIER, plot_AUC = ggp_AUC, class = pkg.env$cv.mb.splsdacox, lst_train_indexes = lst_train_indexes, lst_test_indexes = lst_test_indexes, time = time)))
   }
 }
 

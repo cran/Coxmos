@@ -49,13 +49,19 @@ standard *Coxmos* installation. A list of all optional packages are shown below:
 #### Installing Coxmos
 
 The *Coxmos* R package and all the remaining dependencies can be installed 
-from GitHub using `devtools`:
+from CRAN:
+
+```
+install.packages("Coxmos")
+```
+
+Or from GitHub using `devtools`
 
 ```
 devtools::install_github("BiostatOmics/Coxmos")
 ```
 
-To access vignettes, you will need to force building with
+In case of using Github, to access vignettes, you will need to force building with
 `devtools::install_github(build_vignettes = TRUE)`. Please note that this will
 also install all suggested packages required for vignette build and might 
 increase install time. Alternatively, an HTML version of the vignette is
@@ -67,7 +73,7 @@ folder.
 
 In order to use Coxmos, you will need the following items:
 
-- A explanatory X matrix.
+- An explanatory X matrix.
 - A response survival Y matrix (with two columns, "time" and "event").
 
 Please note that two toy datasets are included in the package. Details to load and use them can be 

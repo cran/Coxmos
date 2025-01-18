@@ -9,8 +9,9 @@ mb.splsdacox(
   Y,
   n.comp = 4,
   vector = NULL,
-  MIN_NVAR = 10,
-  MAX_NVAR = 10000,
+  design = NULL,
+  MIN_NVAR = 1,
+  MAX_NVAR = NULL,
   n.cut_points = 5,
   EVAL_METHOD = "AUC",
   x.center = TRUE,
@@ -31,7 +32,7 @@ mb.splsdacox(
 )
 }
 \arguments{
-\item{X}{Numeric matrix or data.frame. Explanatory variables. Qualitative variables must be
+\item{X}{List of numeric matrices or data.frames. Explanatory variables. Qualitative variables must be
 transform into binary variables.}
 
 \item{Y}{Numeric matrix or data.frame. Response variables. Object must have two columns named as
@@ -44,6 +45,10 @@ observations.}
 components have to be provided. If vector = NULL, an automatic detection is perform (default: NULL). If
 vector is a list, must be named as the names of X param followed by the number of variables to select.}
 
+\item{design}{Numeric matrix. Matrix of size (number of blocks in X) x (number of blocks in X) with
+values between 0 and 1. Each value indicates the strength of the relationship to be modeled between
+two blocks; a value of 0 indicates no relationship, 1 is the maximum value. If NULL, auto-design is computed (default: NULL).}
+
 \item{MIN_NVAR}{Numeric. Minimum range size for computing cut points to select the best number of
 variables to use (default: 10).}
 
@@ -54,8 +59,8 @@ variables to use (default: 1000).}
 If only two cut points are selected, minimum and maximum size are used. For MB approaches as many
 as n.cut_points^n.blocks models will be computed as minimum (default: 5).}
 
-\item{EVAL_METHOD}{Character. If EVAL_METHOD = "AUC", AUC metric will be use to compute the best
-number of variables. In other case, c-index metric will be used (default: "AUC").}
+\item{EVAL_METHOD}{Character. The selected metric will be use to compute the best
+number of variables. Must be one of the following: "AUC", "BRIER" or "c_index" (default: "AUC").}
 
 \item{x.center}{Logical. If x.center = TRUE, X matrix is centered to zero means (default: TRUE).}
 
@@ -151,10 +156,6 @@ elements:
 \code{B.hat}: PLS beta matrix
 
 \code{R2}: PLS R2
-
-\code{SCR}: PLS SCR
-
-\code{SCT}: PLS SCT
 
 \code{nzv}: Variables removed by remove_near_zero_variance or remove_zero_variance.
 

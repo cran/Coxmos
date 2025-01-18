@@ -10,7 +10,8 @@
 #' @param name Character. File name.
 #' @param wide Logical. If TRUE, widescreen format (16:9) is used, in other case (4:3) format.
 #' @param quality Character. One of: "HD", "FHD", "2K", "4K", "8K"
-#' @param dpi Numeric. Dpi value for the image.
+#' @param dpi Numeric. DPI value for the image.
+#' @param format Device to use. Can either be a device function (e.g. png), or one of "eps", "ps", "tex" (pictex), "pdf", "jpeg", "tiff", "png", "bmp", "svg" or "wmf" (windows only).
 #' @param custom Numeric vector. Custom size of the image. Numeric vector of width and height.
 #'
 #' @author Pedro Salguero Garcia. Maintainer: pedsalga@upv.edu.es
@@ -26,123 +27,21 @@
 #' data(iris)
 #' g <- ggplot(iris, aes(Sepal.Width, Sepal.Length, color = Species))
 #' g <- g + geom_point(size = 4)
-#' save_ggplot(g, folder = tempdir())
+#' file_path <- tempfile(fileext = ".png")
+#' ggsave(file_path, plot = g)
+#' unlink(file_path) # Eliminar el archivo temporal
 #' }
 #' }
 
-save_ggplot <- function(plot, folder, name = "plot", wide = TRUE, quality = "4K", dpi = 80,
+save_ggplot <- function(plot, folder, name = "plot", wide = TRUE, quality = "4K",
+                        dpi = 80, format = "tiff",
                         custom = NULL){
   width=NULL
   height=NULL
 
-  if(!quality %in% c("HD", "FHD", "2K", "4K", "8K")){
-    stop("uality must be one of the following options: 'HD', 'FHD', '2K', '4K', '8K'")
+  if(!format %in% c('eps', 'ps', 'tex', 'pdf', 'jpeg', 'tiff', 'png', 'bmp', 'svg', 'wmf')){
+    stop("format must be one of the following options: 'eps', 'ps', 'tex' (pictex), 'pdf', 'jpeg', 'tiff', 'png', 'bmp', 'svg' or 'wmf' (windows only).")
   }
-
-  ratios <- c(1.5,1.333333,1.5,2)
-
-  if(wide){
-    if(quality == "HD"){
-      width = 1280/dpi#4.266667
-      height = 720/dpi#2.4
-    }else if(quality == "FHD"){
-      dpi = dpi * ratios[1]
-      width = 1920/dpi#6.4
-      height = 1080/dpi#3.6
-    }else if(quality == "2K"){
-      dpi = dpi * ratios[1] * ratios[2]
-      width = 2560/dpi#8.533333
-      height = 1440/dpi#4.8
-    }else if(quality == "4K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3]
-      width = 3840/dpi#12.8
-      height = 2160/dpi#7.2
-    }else if(quality == "8K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3] * ratios[4]
-      width = 7680/dpi#25.6
-      height = 4320/dpi#14.4
-    }
-  }else{
-    if(quality == "HD"){
-      width = 960/dpi#3.19992
-      height = 720/dpi
-    }else if(quality == "FHD"){
-      dpi = dpi * ratios[1]
-      width = 1440/dpi#4.79988
-      height = 1080/dpi
-    }else if(quality == "2K"){
-      dpi = dpi * ratios[1] * ratios[2]
-      width = 1920/dpi#6.39984
-      height = 1440/dpi
-    }else if(quality == "4K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3]
-      width = 2880/dpi#9.59976
-      height = 2160/dpi
-    }else if(quality == "8K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3] * ratios[4]
-      width = 5760/dpi#19.19952
-      height = 4320/dpi
-    }
-  }
-
-  if(!is.null(custom)){
-    if(length(custom)==2){
-      width = custom[1]
-      height = custom[2]
-    }
-  }
-
-  if(!endsWith(name,".tiff")){
-    name <- paste0(name, ".tiff")
-  }
-
-  #remove illegal characters
-  name <- transformIllegalChars(name, except = c("-"))
-
-  if(class(plot)[1] %in% "ggsurvplot"){
-    plot_surv = plot$plot
-    if("table" %in% names(plot)){
-      p2 = plot$table
-      plot_surv = cowplot::plot_grid(plot_surv,p2,align = "v",ncol =1,rel_heights = c(4,1))
-    }
-    ggsave(plot = plot_surv, filename = paste0(folder,name), width = width, height = height, device='tiff', dpi=dpi)
-  }else{
-    ggsave(plot = plot, filename = paste0(folder,name), width = width, height = height, device='tiff', dpi=dpi)
-  }
-}
-
-#' save_ggplot.svg
-#' @description Allows to save 'ggplot2' objects in .svg format based on an specific resolution.
-#'
-#' @param plot 'ggplot2' object. Object to plot and save.
-#' @param folder Character. Folder path as character type.
-#' @param name Character. File name.
-#' @param wide Logical. If TRUE, widescreen format (16:9) is used, in other case (4:3) format.
-#' @param quality Character. One of: "HD", "FHD", "2K", "4K", "8K"
-#' @param dpi Numeric. Dpi value for the image.
-#' @param custom Numeric vector. Custom size of the image. Numeric vector of width and height.
-#'
-#' @return Generate as many plot images as list objects in the specific folder or working directory.
-#'
-#' @author Pedro Salguero Garcia. Maintainer: pedsalga@upv.edu.es
-#'
-#' @export
-#'
-#' @examples
-#' \donttest{
-#' if(requireNamespace("ggplot2", quietly = TRUE)){
-#' library(ggplot2)
-#' data(iris)
-#' g <- ggplot(iris, aes(Sepal.Width, Sepal.Length, color = Species))
-#' g <- g + geom_point(size = 4)
-#' save_ggplot.svg(g, folder = tempdir())
-#' }
-#' }
-
-save_ggplot.svg <- function(plot, folder, name = "plot", wide = TRUE, quality = "4K", dpi = 80,
-                            custom = NULL){
-  width=NULL
-  height=NULL
 
   if(!quality %in% c("HD", "FHD", "2K", "4K", "8K")){
     stop("quality must be one of the following options: 'HD', 'FHD', '2K', '4K', '8K'")
@@ -201,8 +100,8 @@ save_ggplot.svg <- function(plot, folder, name = "plot", wide = TRUE, quality = 
     }
   }
 
-  if(!endsWith(name,".svg")){
-    name <- paste0(name, ".svg")
+  if(!endsWith(name,paste0(".",format))){
+    name <- paste0(name, ".", format)
   }
 
   #remove illegal characters
@@ -214,22 +113,23 @@ save_ggplot.svg <- function(plot, folder, name = "plot", wide = TRUE, quality = 
       p2 = plot$table
       plot_surv = cowplot::plot_grid(plot_surv,p2,align = "v",ncol =1,rel_heights = c(4,1))
     }
-    ggsave(plot = plot_surv, filename = paste0(folder,name), width = width, height = height, device='svg', dpi=dpi)
+    ggsave(plot = plot_surv, filename = paste0(folder,name), width = width, height = height, device=format, dpi=dpi)
   }else{
-    ggsave(plot = plot, filename = paste0(folder,name), width = width, height = height, device='svg', dpi=dpi)
+    ggsave(plot = plot, filename = paste0(folder,name), width = width, height = height, device=format, dpi=dpi)
   }
 }
 
 #' save_ggplot_lst
 #' @description Allows to save a list of 'ggplot2' objects in .tiff format based on an specific resolution.
 #'
-#' @param lst_plots List of 'ggplot2'.
+#' @param lst_plots List of 'ggplot2' objects.
 #' @param folder Character. Folder path as character type.
 #' @param prefix Character. Prefix for file name.
 #' @param suffix Character. Sufix for file name.
 #' @param wide Logical. If TRUE, widescreen format (16:9) is used, in other case (4:3) format.
 #' @param quality Character. One of: "HD", "FHD", "2K", "4K", "8K"
-#' @param dpi Numeric. Dpi value for the image.
+#' @param dpi Numeric. DPI value for the image.
+#' @param format Device to use. Can either be a device function (e.g. png), or one of "eps", "ps", "tex" (pictex), "pdf", "jpeg", "tiff", "png", "bmp", "svg" or "wmf" (windows only).
 #' @param custom Numeric vector. Custom size of the image. Numeric vector of width and height.
 #' @param object_name Character. If the file to plot it is inside of a list, name of the object to save.
 #'
@@ -254,9 +154,13 @@ save_ggplot.svg <- function(plot, folder, name = "plot", wide = TRUE, quality = 
 #' }
 
 save_ggplot_lst <- function(lst_plots, folder, prefix = NULL, suffix = NULL, wide = TRUE,
-                            quality = "4K", dpi = 80, custom = NULL, object_name = NULL){
+                            quality = "4K", dpi = 80, format = "png", custom = NULL, object_name = NULL){
   width=NULL
   height=NULL
+
+  if(!format %in% c('eps', 'ps', 'tex', 'pdf', 'jpeg', 'tiff', 'png', 'bmp', 'svg', 'wmf')){
+    stop("format must be one of the following options: 'eps', 'ps', 'tex' (pictex), 'pdf', 'jpeg', 'tiff', 'png', 'bmp', 'svg' or 'wmf' (windows only).")
+  }
 
   if(!quality %in% c("HD", "FHD", "2K", "4K", "8K")){
     stop("quality must be one of the following options: 'HD', 'FHD', '2K', '4K', '8K'")
@@ -322,9 +226,9 @@ save_ggplot_lst <- function(lst_plots, folder, prefix = NULL, suffix = NULL, wid
       #remove illegal characters
       name <- transformIllegalChars(name, except = c("-"))
 
-      name <- paste0(folder,name)
-      if(!endsWith(name,".tiff")){
-        name <- paste0(name, ".tiff")
+      name <- file.path(folder,name)
+      if(!endsWith(name,paste0(".",format))){
+        name <- paste0(name, ".", format)
       }
 
       if(is.null(object_name)){
@@ -334,9 +238,9 @@ save_ggplot_lst <- function(lst_plots, folder, prefix = NULL, suffix = NULL, wid
             p2 = lst_plots[[cn]]$table
             plot_surv = cowplot::plot_grid(plot_surv,p2,align = "v",ncol =1,rel_heights = c(4,1))
           }
-          ggsave(plot = plot_surv, filename = name, width = width, height = height, device='tiff', dpi=dpi)
+          ggsave(plot = plot_surv, filename = name, width = width, height = height, device=format, dpi=dpi)
         }else{
-          ggsave(plot = lst_plots[[cn]], filename = name, width = width, height = height, device='tiff', dpi=dpi)
+          ggsave(plot = lst_plots[[cn]], filename = name, width = width, height = height, device=format, dpi=dpi)
         }
       }else{
         if(class(lst_plots[[cn]][[object_name]])[1] %in% "ggsurvplot"){
@@ -345,9 +249,9 @@ save_ggplot_lst <- function(lst_plots, folder, prefix = NULL, suffix = NULL, wid
             p2 = lst_plots[[cn]][[object_name]]$table
             plot_surv = cowplot::plot_grid(plot_surv,p2,align = "v",ncol =1,rel_heights = c(4,1))
           }
-          ggsave(plot = plot_surv, filename = name, width = width, height = height, device='tiff', dpi=dpi)
+          ggsave(plot = plot_surv, filename = name, width = width, height = height, device=format, dpi=dpi)
         }else{
-          ggsave(plot = lst_plots[[cn]][[object_name]], filename = name, width = width, height = height, device='tiff', dpi=dpi)
+          ggsave(plot = lst_plots[[cn]][[object_name]], filename = name, width = width, height = height, device=format, dpi=dpi)
         }
       }
     }
@@ -358,169 +262,15 @@ save_ggplot_lst <- function(lst_plots, folder, prefix = NULL, suffix = NULL, wid
       #remove illegal characters
       name <- transformIllegalChars(name, except = c("-"))
 
-      name <- paste0(folder,name)
-      if(!endsWith(name,".tiff")){
-        name <- paste0(name, ".tiff")
+      name <- file.path(folder,name)
+      if(!endsWith(name,paste0(".",format))){
+        name <- paste0(name, ".", format)
       }
 
       if(is.null(object_name)){
-        ggsave(plot = lst_plots[[cn]], filename = name, width = width, height = height, device='tiff', dpi=dpi)
+        ggsave(plot = lst_plots[[cn]], filename = name, width = width, height = height, device=format, dpi=dpi)
       }else{
-        ggsave(plot = lst_plots[[cn]][[object_name]], filename = name, width = width, height = height, device='tiff', dpi=dpi)
-      }
-    }
-  }
-}
-
-#' save_ggplot_lst.svg
-#' @description Allows to save a list of 'ggplot2' objects in .svg format based on an specific resolution.
-#'
-#' @param lst_plots List of 'ggplot2'.
-#' @param folder Character. Folder path as character type.
-#' @param prefix Character. Prefix for file name.
-#' @param suffix Character. Sufix for file name.
-#' @param wide Logical. If TRUE, widescreen format (16:9) is used, in other case (4:3) format.
-#' @param quality Character. One of: "HD", "FHD", "2K", "4K", "8K"
-#' @param dpi Numeric. Dpi value for the image.
-#' @param custom Numeric vector. Custom size of the image. Numeric vector of width and height.
-#' @param object_name Character. If the file to plot it is inside of a list, name of the object to save.
-#'
-#' @return Generate as many plot images as list objects in the specific folder or working directory.
-#'
-#' @author Pedro Salguero Garcia. Maintainer: pedsalga@upv.edu.es
-#'
-#' @export
-#'
-#' @examples
-#' \donttest{
-#' if(requireNamespace("ggplot2", quietly = TRUE)){
-#' library(ggplot2)
-#' data(iris)
-#' g <- ggplot(iris, aes(Sepal.Width, Sepal.Length, color = Species))
-#' g <- g + geom_point(size = 4)
-#' g2 <- ggplot(iris, aes(Petal.Width, Petal.Length, color = Species))
-#' g2 <- g2 + geom_point(size = 4)
-#' lst_plots <- list("Sepal" = g, "Petal" = g2)
-#' save_ggplot_lst.svg(lst_plots, folder = tempdir())
-#' }
-#' }
-
-save_ggplot_lst.svg <- function(lst_plots, folder, prefix = NULL, suffix = NULL, wide = TRUE,
-                                quality = "4K", dpi = 80, custom = NULL, object_name = NULL){
-  width=NULL
-  height=NULL
-
-  if(!quality %in% c("HD", "FHD", "2K", "4K", "8K")){
-    stop("quality must be one of the following options: 'HD', 'FHD', '2K', '4K', '8K'")
-  }
-
-  ratios <- c(1.5,1.333333,1.5,2)
-
-  if(wide){
-    if(quality == "HD"){
-      width = 1280/dpi#4.266667
-      height = 720/dpi#2.4
-    }else if(quality == "FHD"){
-      dpi = dpi * ratios[1]
-      width = 1920/dpi#6.4
-      height = 1080/dpi#3.6
-    }else if(quality == "2K"){
-      dpi = dpi * ratios[1] * ratios[2]
-      width = 2560/dpi#8.533333
-      height = 1440/dpi#4.8
-    }else if(quality == "4K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3]
-      width = 3840/dpi#12.8
-      height = 2160/dpi#7.2
-    }else if(quality == "8K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3] * ratios[4]
-      width = 7680/dpi#25.6
-      height = 4320/dpi#14.4
-    }
-  }else{
-    if(quality == "HD"){
-      width = 960/dpi#3.19992
-      height = 720/dpi
-    }else if(quality == "FHD"){
-      dpi = dpi * ratios[1]
-      width = 1440/dpi#4.79988
-      height = 1080/dpi
-    }else if(quality == "2K"){
-      dpi = dpi * ratios[1] * ratios[2]
-      width = 1920/dpi#6.39984
-      height = 1440/dpi
-    }else if(quality == "4K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3]
-      width = 2880/dpi#9.59976
-      height = 2160/dpi
-    }else if(quality == "8K"){
-      dpi = dpi * ratios[1] * ratios[2] * ratios[3] * ratios[4]
-      width = 5760/dpi#19.19952
-      height = 4320/dpi
-    }
-  }
-
-  if(!is.null(custom)){
-    if(length(custom)==2){
-      width = custom[1]
-      height = custom[2]
-    }
-  }
-
-  if(!is.null(names(lst_plots))){
-    for(cn in names(lst_plots)){
-
-      name <- paste0(prefix,cn,suffix)
-      #remove illegal characters
-      name <- transformIllegalChars(name, except = c("-"))
-
-      name <- paste0(folder,name)
-      if(!endsWith(name,".svg")){
-        name <- paste0(name, ".svg")
-      }
-
-      if(is.null(object_name)){
-
-        if(class(lst_plots[[cn]])[1] %in% "ggsurvplot"){
-          plot_surv = lst_plots[[cn]]$plot
-          if("table" %in% names(lst_plots[[cn]])){
-            p2 = lst_plots[[cn]]$table
-            plot_surv = cowplot::plot_grid(plot_surv,p2,align = "v",ncol =1,rel_heights = c(4,1))
-          }
-          ggsave(plot = plot_surv, filename = name, width = width, height = height, device='svg', dpi=dpi)
-        }else{
-          ggsave(plot = lst_plots[[cn]], filename = name, width = width, height = height, device='svg', dpi=dpi)
-        }
-
-      }else{
-        if(class(lst_plots[[cn]][[object_name]])[1] %in% "ggsurvplot"){
-          plot_surv = lst_plots[[cn]][[object_name]]$plot
-          if("table" %in% names(lst_plots[[cn]][[object_name]])){
-            p2 = lst_plots[[cn]][[object_name]]$table
-            plot_surv = cowplot::plot_grid(plot_surv,p2,align = "v",ncol =1,rel_heights = c(4,1))
-          }
-          ggsave(plot = plot_surv, filename = name, width = width, height = height, device='svg', dpi=dpi)
-        }else{
-          ggsave(plot = lst_plots[[cn]][[object_name]], filename = name, width = width, height = height, device='svg', dpi=dpi)
-        }
-      }
-    }
-  }else{
-    for(cn in 1:length(lst_plots)){
-
-      name <- paste0(prefix,cn,suffix)
-      #remove illegal characters
-      name <- transformIllegalChars(name, except = c("-"))
-
-      name <- paste0(folder,name)
-      if(!endsWith(name,".svg")){
-        name <- paste0(name, ".svg")
-      }
-
-      if(is.null(object_name)){
-        ggsave(plot = lst_plots[[cn]], filename = name, width = width, height = height, device='svg', dpi=dpi)
-      }else{
-        ggsave(plot = lst_plots[[cn]][[object_name]], filename = name, width = width, height = height, device='svg', dpi=dpi)
+        ggsave(plot = lst_plots[[cn]][[object_name]], filename = name, width = width, height = height, device=format, dpi=dpi)
       }
     }
   }
@@ -547,13 +297,20 @@ save_ggplot_lst.svg <- function(lst_plots, folder, prefix = NULL, suffix = NULL,
 #' The resultant plot is generated using the 'ggplot2' package, ensuring a high-quality and interpretable
 #' visualization. The Y-axis of the plot represents the computational time, typically in minutes, while
 #' the X-axis enumerates the different models. The function also offers customization options for axis
-#' labels, ensuring that the resultant plot aligns with the user's preferences and the intended audience's
+#' labels, legend title and text size, and the size and position of the values displayed on the bars,
+#' ensuring that the resultant plot aligns with the user's preferences and the intended audience's
 #' expectations.
 #'
 #' @param lst_models List of Coxmos models. Each Coxmos object has the attribute time measured in
 #' minutes (cross-validation models could be also added to this function).
-#' @param x.text Character. X axis title.
+#' @param x.text Character. X axis title (default: "Method").
 #' @param y.text Character. Y axis title. If y.text = NULL, then y.text = "Time (mins)" (default: NULL).
+#' @param legend.title Character. Title of the legend (default: "Method").
+#' @param x.text.size Numeric. Size of the text for the x-axis labels (default: 12).
+#' @param x.text.angle Numeric. Angle of the text for the x-axis labels (default: 0).
+#' @param legend.text.size Numeric. Size of the text for the legend labels (default: 12).
+#' @param value.text.size Numeric. Size of the text for the values displayed on the bars (default: 4).
+#' @param value.nudge.y Numeric. Vertical adjustment for the text of the values displayed on the bars (default: 0.005).
 #'
 #' @return A 'ggplot2' bar plot object.
 #'
@@ -564,41 +321,39 @@ save_ggplot_lst.svg <- function(lst_plots, folder, prefix = NULL, suffix = NULL,
 #' @examples
 #' data("X_proteomic")
 #' data("Y_proteomic")
-#' X <- X_proteomic[,1:50]
-#' Y <- Y_proteomic
+#' X <- X_proteomic[1:30,1:30]
+#' Y <- Y_proteomic[1:30,]
 #' coxSW.model <- coxSW(X, Y, x.center = TRUE, x.scale = TRUE)
 #' coxEN.model <- coxEN(X, Y, x.center = TRUE, x.scale = TRUE)
 #' lst_models = list("coxSW" = coxSW.model, "coxEN" = coxEN.model)
-#' plot_time.list(lst_models, x.text = "Method")
+#' plot_time.list(lst_models, x.text = "Method", legend.title = "Model Method",
+#'                x.text.size = 14, x.text.angle = 90, legend.text.size = 14,
+#'                value.text.size = 5, value.nudge.y = 0.2)
 
-plot_time.list <- function(lst_models, x.text = "Method", y.text = NULL){
+plot_time.list <- function(lst_models, x.text = "Method", y.text = NULL, legend.title = "Method",
+                           x.text.size = 12, x.text.angle = 0,
+                           legend.text.size = 12,
+                           value.text.size = 4, value.nudge.y = 0.005){
 
-  #check names in lst_models
+  # check names in lst_models
   lst_models <- checkModelNames(lst_models)
 
-  lst_times <- list()
-  for(m in names(lst_models)){
+  lst_times <- lapply(names(lst_models), function(m) {
     if(isa(lst_models[[m]],pkg.env$model_class)){
-      lst_times[[m]] <- lst_models[[m]]$time
-    }else if(isa(lst_models[[m]][[1]],pkg.env$model_class)){
+      return(lst_models[[m]]$time)
+    } else if(isa(lst_models[[m]][[1]],pkg.env$model_class)){
       eval_sum <- lst_models[[m]][[1]]$time
-      if(length(lst_models[[m]])>1){
+      if(length(lst_models[[m]]) > 1){
         for(i in 2:length(lst_models[[m]])){
           eval_sum <- eval_sum + lst_models[[m]][[i]]$time
         }
       }
-      lst_times[[m]] <- eval_sum
+      return(eval_sum)
     }
+  })
+  names(lst_times) <- names(lst_models)
 
-  }
-
-  total_time <- lst_times[[1]]
-  if(length(lst_times)>1){
-    for(m in 2:length(lst_times)){
-      total_time <- total_time + lst_times[[m]]
-    }
-  }
-
+  total_time <- Reduce(`+`, lst_times)
   lst_times$Total <- total_time
 
   df.times <- do.call(rbind.data.frame, lst_times)
@@ -606,79 +361,56 @@ plot_time.list <- function(lst_models, x.text = "Method", y.text = NULL){
   df.times$method <- names(lst_times)
   rownames(df.times) <- NULL
 
-  roundTo = 0
-  max.breaks = 10
+  max.breaks <- 10
+  roundTo <- 0
   if(roundTo == 0){
-    #select the decimals of Y
-    if(length(grep("\\.", df.times$times))>0){
-      ch <- gsub("\\.", "", as.character(format(min(df.times$times)/max.breaks, scientific = FALSE, trim = TRUE)))
-      cont = 0
-      for(c in 1:nchar(ch)){
-        if(substr(ch,c,c) == "0"){
-          cont = cont + 1
-        }else{
-          break
-        }
+    min_time <- min(df.times$times)
+    ch <- gsub("\\.", "", as.character(format(min_time/max.breaks, scientific = FALSE, trim = TRUE)))
+    cont <- 0
+    for(c in 1:nchar(ch)){
+      if(substr(ch,c,c) == "0"){
+        cont <- cont + 1
+      } else {
+        break
       }
-      roundTo = 1*10^-cont
-    }else{
-      roundTo = 0.1
     }
+    roundTo <- 1 * 10^-cont
   }
 
-  breaks_size = round2any(max(df.times$times), roundTo, f = ceiling) / max.breaks
-
-  roundTo = 0
-  max.breaks = 10
-  if(roundTo == 0){
-    #select the decimals of Y
-    if(length(grep("\\.", df.times$times))>0){
-      ch <- gsub("\\.", "", as.character(format(max(df.times$times)/max.breaks, scientific = FALSE, trim = TRUE)))
-      cont = 1
-      for(c in 1:nchar(ch)){
-        if(substr(ch,c,c) == "0"){
-          cont = cont + 1
-        }else{
-          break
-        }
-      }
-      roundTo = 1*10^-cont
-    }else{
-      roundTo = 0.1
-    }
-  }
-
-  breaks_size = round2any(breaks_size, roundTo, f = ceiling)
-  breaks = seq(0, max(df.times$times)+breaks_size, by=breaks_size)
-
-  accuracy <- roundTo
-  max <- max(breaks)
+  breaks_size <- round2any(max(df.times$times), roundTo, f = ceiling) / max.breaks
+  breaks <- seq(0, max(df.times$times) + breaks_size, by = breaks_size)
 
   df.times$times <- round(df.times$times, digits = 4)
-  x.var = "method"
-  y.var = "times"
-  x.color = "method"
-  x.text = x.text
+  x.var <- "method"
+  y.var <- "times"
+  x.color <- "method"
+
   if(is.null(y.text)){
-    y.text = paste0("Time (",attr(lst_times[["Total"]], "units"),")")
+    y.text <- paste0("Time (", attr(lst_times[["Total"]], "units"), ")")
   }
 
   df.times$method <- factor(df.times$method, levels = df.times$method)
 
   ggp_time <- ggplot(df.times, aes_string(x = x.var, y = y.var, fill = x.color)) +
-    geom_bar(stat="identity") +
+    geom_bar(stat = "identity") +
     scale_y_continuous(breaks = breaks) +
-    geom_text(aes_string(label = "times"), vjust = 0, nudge_y = accuracy)
+    geom_text(aes_string(label = "times"), vjust = 0, nudge_y = value.nudge.y, size = value.text.size) +
+    theme(
+      axis.text.x = element_text(size = x.text.size, angle = x.text.angle, hjust = ifelse(x.text.angle == 90, 1, 0.5), vjust = ifelse(x.text.angle == 90, 0.5, 0.5)),
+      legend.title = element_text(size = x.text.size),
+      legend.text = element_text(size = legend.text.size)
+    ) +
+    guides(fill = guide_legend(title = legend.title))
 
   if(requireNamespace("RColorConesa", quietly = TRUE)){
     ggp_time <- ggp_time + RColorConesa::scale_fill_conesa(palette = "complete")
   }
 
   if(!is.null(y.text)){
-    ggp_time = ggp_time + ylab(label = y.text)
+    ggp_time <- ggp_time + ylab(label = y.text)
   }
   if(!is.null(x.text)){
-    ggp_time = ggp_time + xlab(label = x.text)
+    ggp_time <- ggp_time + xlab(label = x.text)
   }
 
   return(ggp_time)
@@ -936,9 +668,9 @@ plot_evaluation <- function(eval_results, evaluation = "AUC", pred.attr = "mean"
         next
       }else{
         vector <- c(m, c,
-                    mean(eval_results$df[eval_results$df$method==m,c,drop = TRUE]),
-                    median(eval_results$df[eval_results$df$method==m,c,drop = TRUE]),
-                    sd(eval_results$df[eval_results$df$method==m,c,drop = TRUE]))
+                    mean(eval_results$df[eval_results$df$method==m,c,drop = TRUE], na.rm = T),
+                    median(eval_results$df[eval_results$df$method==m,c,drop = TRUE], na.rm = T),
+                    sd(eval_results$df[eval_results$df$method==m,c,drop = TRUE], na.rm = T))
         table <- rbind(table, vector)
       }
     }
@@ -955,6 +687,14 @@ plot_evaluation <- function(eval_results, evaluation = "AUC", pred.attr = "mean"
   table$sd <- as.numeric(table$sd)
 
   return(list("lst_plots" = lst_ggp, "lst_plot_comparisons" = lst_plot_comparisons, df = table))
+}
+
+####
+
+# Obtaining ggplot2 colors
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
 }
 
 boxplot.performance <- function(df, x.var, y.var, x.fill = NULL, x.alpha = NULL, x.lab = NULL,
@@ -1031,33 +771,231 @@ boxplot.performance <- function(df, x.var, y.var, x.fill = NULL, x.alpha = NULL,
   }
 
   if(is.null(x.fill)){
-    ggp <- ggplot2::ggplot(df, aes_string(x = x.var, y = y.var, fill = x.var, alpha = x.alpha)) +
-      geom_boxplot() +
-      xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
-      ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
-      theme(legend.position = "none") +
+
+    if(x.var %in% 'eval'){
+
+      message("Evaluator printing mode...")
+
+      df$type <- ifelse(df$eval %in% c("risksetROC", "smoothROCtime_I"), "Additional Evaluators", "Standard Evaluators")
+      df$type <- factor(df$type, levels = c("Standard Evaluators", "Additional Evaluators"))
+
+      levels_standard <- levels(droplevels(unique(df[df$type %in% "Standard Evaluators",]$eval)))
+      levels_additional <- levels(droplevels(unique(df[df$type %in% "Additional Evaluators",]$eval)))
+
+      if(!is.null(median.val)){
+        names(median.val) <- levels(df[,x.var,drop = TRUE])
+        median.val <- round(median.val, round.median)
+
+        if(eval_method=="median"){
+          x_names_standard <- paste0(levels_standard, "\nMedian: ", median.val[levels_standard])
+          x_names_additional <- paste0(levels_additional, "\nMedian: ", median.val[levels_additional])
+        }else{
+          x_names_standard <- paste0(levels_standard, "\nMean: ", median.val[levels_standard])
+          x_names_additional <- paste0(levels_additional, "\nMean: ", median.val[levels_additional])
+        }
+      }
+
+      if(requireNamespace("RColorConesa", quietly = TRUE)){
+        # Obtaining RColorConesa colors
+        n_colors <- length(unique(df$eval))
+        colors <- RColorConesa::colorConesa(n_colors)   # Increase by 2for additional colors
+        colors_standard <- colors[1:length(unique(df[df$type %in% "Standard Evaluators", "eval"]))]  # Primeros n colores para los Standard Evaluators
+        colors_additional <- colors[(length(colors_standard) + 1):length(colors)]  # Últimos 2 colores para los Additional Evaluators
+      }else{
+        n_colors <- length(unique(df$eval))
+        colors <- gg_color_hue(n_colors)   # Increase by 2for additional colors
+        colors_standard <- colors[1:length(unique(df[df$type %in% "Standard Evaluators", "eval"]))]  # Primeros n colores para los Standard Evaluators
+        colors_additional <- colors[(length(colors_standard) + 1):length(colors)]  # Últimos 2 colores para los Additional Evaluators
+      }
+
+      ggp1 <- ggplot2::ggplot(df[df$type %in% "Standard Evaluators",], aes_string(x = x.var, y = y.var, fill = x.var, alpha = x.alpha)) +
+        geom_boxplot() +
+        xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+        ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+        theme(legend.position = "none") +
+        scale_fill_manual(values = colors_standard) +
+        ggtitle(label = title, subtitle = "Standard Evaluators")
+
+      if(show.median & !is.null(median.val)){
+        ggp1 <- ggp1 + scale_x_discrete(labels = x_names_standard)
+      }
+
+      if(!is.null(y.limit) & !y.var %in% y.limit.exception){
+        ggp1 <- ggp1 + scale_y_continuous(limits = y.limit, n.breaks = 15)
+      }else{
+        ggp1 <- ggp1 + scale_y_continuous(n.breaks = 15)
+      }
+
+      ggp2 <- ggplot2::ggplot(df[df$type %in% "Additional Evaluators",], aes_string(x = x.var, y = y.var, fill = x.var, alpha = x.alpha)) +
+        geom_boxplot() +
+        xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+        ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+        theme(legend.position = "none") +
+        scale_fill_manual(values = colors_additional) +
+        ggtitle(label = NULL, subtitle = "Additional Evaluators")
+
+      if(show.median & !is.null(median.val)){
+        ggp2 <- ggp2 + scale_x_discrete(labels = x_names_additional)
+      }
+
+      if(!is.null(y.limit) & !y.var %in% y.limit.exception){
+        ggp2 <- ggp2 + scale_y_continuous(limits = y.limit, n.breaks = 15)
+      }else{
+        ggp2 <- ggp2 + scale_y_continuous(n.breaks = 15)
+      }
+
+      ggp1 <- ggp1 + theme(legend.text=element_text(size = legend_size_text), legend.title = element_text(size=legend_size_text, face = "bold"))
+      ggp1 <- ggp1 + guides(fill=guide_legend(title=legend_title))
+      ggp1 <- ggp1 + theme(axis.text.x = element_text(vjust = 0.5, size = x_axis_size_text))
+      ggp1 <- ggp1 + theme(axis.text.y = element_text(vjust = 0.5, hjust=1, size = y_axis_size_text))
+
+      ggp2 <- ggp2 + theme(legend.text=element_text(size = legend_size_text), legend.title = element_text(size=legend_size_text, face = "bold"))
+      ggp2 <- ggp2 + guides(fill=guide_legend(title=legend_title))
+      ggp2 <- ggp2 + theme(axis.text.x = element_text(vjust = 0.5, size = x_axis_size_text))
+      ggp2 <- ggp2 + theme(axis.text.y = element_text(vjust = 0.5, hjust=1, size = y_axis_size_text))
+
+      # Join plots by 'patchwork'
+      if(requireNamespace("patchwork", quietly = TRUE)){
+        ggp <- (ggp1 + ggp2 + patchwork::plot_layout(ncol = 2, widths = c(6, 4))) & theme(legend.position = "bottom")
+      }else{
+        ggp <- ggplot2::ggplot(df, aes_string(x = x.var, y = y.var, fill = x.var, alpha = x.alpha)) +
+          geom_boxplot() +
+          xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+          ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+          theme(legend.position = "none")
+
+        if(requireNamespace("RColorConesa", quietly = TRUE)){
+          ggp <- ggp + RColorConesa::scale_fill_conesa(palette = "complete")
+        }
+      }
+
+    }else{
+      ggp <- ggplot2::ggplot(df, aes_string(x = x.var, y = y.var, fill = x.var, alpha = x.alpha)) +
+        geom_boxplot() +
+        xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+        ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+        theme(legend.position = "none")
 
       if(requireNamespace("RColorConesa", quietly = TRUE)){
         ggp <- ggp + RColorConesa::scale_fill_conesa(palette = "complete")
       }
+    }
 
     if(jitter){
       ggp <- ggp + geom_jitter(color="black", size=1, alpha=0.25, width = 0.2)
     }
 
   }else{
-    ggp <- ggplot2::ggplot(df, aes_string(x = x.var, y = y.var, fill = x.fill, alpha = x.alpha)) +
-      geom_boxplot(position = position_dodge2(preserve = "single")) +
-      xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
-      ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
-      theme(legend.position = "bottom")
 
-    if(requireNamespace("RColorConesa", quietly = TRUE)){
-      ggp <- ggp + RColorConesa::scale_fill_conesa(palette = "complete")
-    }
+    if(x.var %in% 'eval'){
 
-    if(jitter){
-      ggp <- ggp + geom_point(position=position_jitterdodge(), color="black", size=1, alpha=0.25)
+      message("Evaluator printing mode...")
+
+      df$type <- ifelse(df$eval %in% c("risksetROC", "smoothROCtime_I"), "Additional Evaluators", "Standard Evaluators")
+      df$type <- factor(df$type, levels = c("Standard Evaluators", "Additional Evaluators"))
+
+      levels_standard <- levels(droplevels(unique(df[df$type %in% "Standard Evaluators",]$eval)))
+      levels_additional <- levels(droplevels(unique(df[df$type %in% "Additional Evaluators",]$eval)))
+
+      if(!is.null(median.val)){
+        names(median.val) <- levels(df[,x.var,drop = TRUE])
+        median.val <- round(median.val, round.median)
+
+        if(eval_method=="median"){
+          x_names_standard <- paste0(levels_standard, "\nMedian: ", median.val[levels_standard])
+          x_names_additional <- paste0(levels_additional, "\nMedian: ", median.val[levels_additional])
+        }else{
+          x_names_standard <- paste0(levels_standard, "\nMean: ", median.val[levels_standard])
+          x_names_additional <- paste0(levels_additional, "\nMean: ", median.val[levels_additional])
+        }
+      }
+
+      if(requireNamespace("RColorConesa", quietly = TRUE)){
+        # Obtaining RColorConesa colors
+        n_colors <- length(unique(df[,x.fill]))
+        colors <- RColorConesa::colorConesa(n_colors)
+      }else{
+        n_colors <- length(unique(df$eval))
+
+        # Obtaining ggplot2 colors
+        colors <- gg_color_hue(n_colors)  # Increase by 2for additional colors
+      }
+
+      ggp1 <- ggplot2::ggplot(df[df$type %in% "Standard Evaluators",], aes_string(x = x.var, y = y.var, fill = x.fill, alpha = x.alpha)) +
+        geom_boxplot(position = position_dodge2(preserve = "single")) +
+        xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+        ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+        theme(legend.position = "bottom") +
+        scale_fill_manual(values = colors) +
+        ggtitle(label = title, subtitle = "Standard Evaluators")
+
+      if(show.median & !is.null(median.val)){
+        ggp1 <- ggp1 + scale_x_discrete(labels = x_names_standard)
+      }
+
+      if(!is.null(y.limit) & !y.var %in% y.limit.exception){
+        ggp1 <- ggp1 + scale_y_continuous(limits = y.limit, n.breaks = 15)
+      }else{
+        ggp1 <- ggp1 + scale_y_continuous(n.breaks = 15)
+      }
+
+      ggp2 <- ggplot2::ggplot(df[df$type %in% "Additional Evaluators",], aes_string(x = x.var, y = y.var, fill = x.fill, alpha = x.alpha)) +
+        geom_boxplot(position = position_dodge2(preserve = "single")) +
+        xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+        ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+        theme(legend.position = "bottom") +
+        scale_fill_manual(values = colors) +
+        ggtitle(label = NULL, subtitle = "Additional Evaluators")
+
+      if(show.median & !is.null(median.val)){
+        ggp2 <- ggp2 + scale_x_discrete(labels = x_names_additional)
+      }
+
+      if(!is.null(y.limit) & !y.var %in% y.limit.exception){
+        ggp2 <- ggp2 + scale_y_continuous(limits = y.limit, n.breaks = 15)
+      }else{
+        ggp2 <- ggp2 + scale_y_continuous(n.breaks = 15)
+      }
+
+      ggp1 <- ggp1 + theme(legend.text=element_text(size = legend_size_text), legend.title = element_text(size=legend_size_text, face = "bold"))
+      ggp1 <- ggp1 + guides(fill=guide_legend(title=legend_title))
+      ggp1 <- ggp1 + theme(axis.text.x = element_text(vjust = 0.5, size = x_axis_size_text))
+      ggp1 <- ggp1 + theme(axis.text.y = element_text(vjust = 0.5, hjust=1, size = y_axis_size_text))
+
+      ggp2 <- ggp2 + theme(legend.text=element_text(size = legend_size_text), legend.title = element_text(size=legend_size_text, face = "bold"))
+      ggp2 <- ggp2 + guides(fill=guide_legend(title=legend_title))
+      ggp2 <- ggp2 + theme(axis.text.x = element_text(vjust = 0.5, size = x_axis_size_text))
+      ggp2 <- ggp2 + theme(axis.text.y = element_text(vjust = 0.5, hjust=1, size = y_axis_size_text))
+
+      # Join plots by 'patchwork'
+      if(requireNamespace("patchwork", quietly = TRUE)){
+        ggp <- (ggp1 + ggp2 + patchwork::plot_layout(ncol = 2, widths = c(6, 4))) & theme(legend.position = "bottom")
+      }else{
+        ggp <- ggplot2::ggplot(df, aes_string(x = x.var, y = y.var, fill = x.var, alpha = x.alpha)) +
+          geom_boxplot() +
+          xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+          ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+          theme(legend.position = "none")
+
+        if(requireNamespace("RColorConesa", quietly = TRUE)){
+          ggp <- ggp + RColorConesa::scale_fill_conesa(palette = "complete")
+        }
+      }
+
+    }else{
+      ggp <- ggplot2::ggplot(df, aes_string(x = x.var, y = y.var, fill = x.fill, alpha = x.alpha)) +
+        geom_boxplot(position = position_dodge2(preserve = "single")) +
+        xlab(ifelse(is.null(x.lab), x.var, x.lab)) +
+        ylab(ifelse(is.null(y.lab),toupper(y.var),y.lab)) +
+        theme(legend.position = "bottom")
+
+      if(requireNamespace("RColorConesa", quietly = TRUE)){
+        ggp <- ggp + RColorConesa::scale_fill_conesa(palette = "complete")
+      }
+
+      if(jitter){
+        ggp <- ggp + geom_point(position=position_jitterdodge(), color="black", size=1, alpha=0.25)
+      }
     }
 
   }
@@ -1075,10 +1013,12 @@ boxplot.performance <- function(df, x.var, y.var, x.fill = NULL, x.alpha = NULL,
     }
   }
 
-  if(!is.null(y.limit) & !y.var %in% y.limit.exception){
-    ggp <- ggp + scale_y_continuous(limits = y.limit, n.breaks = 15)
-  }else{
-    ggp <- ggp + scale_y_continuous(n.breaks = 15)
+  if(!x.var %in% 'eval'){
+    if(!is.null(y.limit) & !y.var %in% y.limit.exception){
+      ggp <- ggp + scale_y_continuous(limits = y.limit, n.breaks = 15)
+    }else{
+      ggp <- ggp + scale_y_continuous(n.breaks = 15)
+    }
   }
 
   if(!is.null(test)){ #with less than
@@ -1108,8 +1048,10 @@ boxplot.performance <- function(df, x.var, y.var, x.fill = NULL, x.alpha = NULL,
     )
   }
 
-  if(show.median & !is.null(median.val)){
-    ggp <- ggp + scale_x_discrete(labels = x_names)
+  if(!x.var %in% 'eval'){
+    if(show.median & !is.null(median.val)){
+      ggp <- ggp + scale_x_discrete(labels = x_names)
+    }
   }
 
   if(!is.null(fill.lab)){
@@ -1120,14 +1062,18 @@ boxplot.performance <- function(df, x.var, y.var, x.fill = NULL, x.alpha = NULL,
     ggp <- ggp + guides(alpha=guide_legend(title=alpha.lab))
   }
 
-  if(!is.null(title)){
-    ggp <- ggp + ggtitle(title)
+  if(!x.var %in% 'eval'){
+    if(!is.null(title)){
+      ggp <- ggp + ggtitle(title)
+    }
   }
 
-  ggp <- ggp + theme(legend.text=element_text(size = legend_size_text), legend.title = element_text(size=legend_size_text, face = "bold"))
-  ggp <- ggp + guides(fill=guide_legend(title=legend_title))
-  ggp <- ggp + theme(axis.text.x = element_text(vjust = 0.5, size = x_axis_size_text))
-  ggp <- ggp + theme(axis.text.y = element_text(vjust = 0.5, hjust=1, size = y_axis_size_text))
+  if(!x.var %in% 'eval'){
+    ggp <- ggp + theme(legend.text=element_text(size = legend_size_text), legend.title = element_text(size=legend_size_text, face = "bold"))
+    ggp <- ggp + guides(fill=guide_legend(title=legend_title))
+    ggp <- ggp + theme(axis.text.x = element_text(vjust = 0.5, size = x_axis_size_text))
+    ggp <- ggp + theme(axis.text.y = element_text(vjust = 0.5, hjust=1, size = y_axis_size_text))
+  }
 
   return(ggp)
 }
@@ -2120,7 +2066,7 @@ plot_divergent.biplot <- function(X, Y, NAMEVAR1, NAMEVAR2, BREAKTIME, x.text = 
 #' size (default: TRUE).
 #' @param colorReverse Logical. Reverse palette colors (default: FALSE).
 #' @param text.size Numeric. Text size (default: 2).
-#' @param overlaps Numeric. Number of overlaps to show when plotting loading names (default: 10).
+#' @param overlaps Numeric. Number of overlaps to show when plotting loading names. Recommended to be the same as top parameter (default: 10).
 #'
 #' @return A list of two elements.
 #' \code{plot}: Score, Loading or Biplot graph in 'ggplot2' format.
@@ -2173,6 +2119,98 @@ plot_PLS_Coxmos <- function(model, comp = c(1,2), mode = "scores", factor = NULL
     stop("Model must be a PLS Coxmos model.")
   }
 
+}
+
+plot_pls_1comp <- function(matrix, mode = "loadings", factor_col = NULL, n_top = 10) {
+
+  # Verificar el modo
+  if (!mode %in% c("loadings", "scores", "biplot")) {
+    stop("mode is not correct.")
+  }
+
+  # Convertir la matriz de loadings en un data.frame
+  df_loadings <- as.data.frame(matrix)
+  if(!is.null(factor_col)){
+    df_loadings <- cbind(df_loadings, factor_col)
+  }
+
+  # Asegurarse de que p1 está en los nombres de columnas
+  if (!"p1" %in% colnames(df_loadings)) {
+    stop("The matrix must contain a column named 'p1'")
+  }
+
+  # Añadir nombres de las variables como columna
+  df_loadings$Variable <- rownames(matrix)
+
+  # Ordenar por los valores absolutos de los loadings para identificar las más relevantes
+  df_loadings <- df_loadings[order(abs(df_loadings$p1), decreasing = TRUE), ]
+
+  # Seleccionar las n variables más importantes
+  df_top_loadings <- if (!is.null(n_top)) {
+    head(df_loadings, n_top)
+  } else {
+    df_loadings
+  }
+
+  # Configuración del color
+  color <- NULL
+
+  if (requireNamespace("RColorConesa", quietly = TRUE)) {
+    if (mode == "scores") {
+      if(!is.null(factor_col)){
+        color <- RColorConesa::colorConesa(length(levels(factor_col)))
+      }else{
+        color <- RColorConesa::colorConesa(1)
+      }
+    } else {
+      if(!is.null(factor_col)){
+        color <- RColorConesa::colorConesa(length(levels(factor_col)), palette = "cold")
+      }else{
+        color <- RColorConesa::colorConesa(1, palette = "cold")
+      }
+    }
+  } else {
+    if (mode == "scores") {
+      if(!is.null(factor_col)){
+        color <- colours()[length(levels(factor_col))]
+      }else{
+        color <- "orange"
+      }
+
+    } else {
+      if(!is.null(factor_col)){
+        color <- grDevices::colours()[length(levels(factor_col))]
+      }else{
+        color <- "steelblue"
+      }
+    }
+  }
+
+  Variable <- df_loadings$Variable
+  p1 <- df_loadings$p1
+
+  # Crear el gráfico usando ggplot
+  if(!is.null(factor_col)){
+    p <- ggplot(df_top_loadings, aes(x = reorder(Variable, p1), y = p1, fill = factor_col)) +
+      geom_bar(stat = "identity") +
+      scale_fill_manual(values = color) +
+      coord_flip() +
+      labs(title = paste0(mode, " Plot"),
+           x = ifelse(mode == "scores", "Observations", "Variables"),
+           y = paste0(mode, " (comp.1)"),
+           fill = "Group") +
+      theme_minimal()
+  }else{
+    p <- ggplot(df_top_loadings, aes(x = reorder(Variable, p1), y = p1, fill = color)) +
+      geom_bar(stat = "identity") +
+      coord_flip() +
+      labs(title = paste0(mode, " Plot"),
+           x = ifelse(mode == "scores", "Observations", "Variables"),
+           y = paste0(mode, " (comp.1)")) +
+      theme_minimal() +
+      theme(legend.position = "none")
+  }
+  return(p)
 }
 
 #' plot_Coxmos.PLS.model
@@ -2255,7 +2293,7 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
     factor <- factor(model$Y$data[,"event"])
   }
 
-  if(!isa(aux.model,pkg.env$model_class)){
+  if(!isa(aux.model, pkg.env$model_class)){
     stop_quietly("'model' must be a Coxmos object.")
   }else if(attr(aux.model, "model") %in% c(pkg.env$multiblock_methods)){
     stop_quietly("For single block models, use the function 'plot_Coxmos.MB.PLS.model'")
@@ -2263,6 +2301,9 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
     stop_quietly("'model' must be a Coxmos object PLS class ('sPLS-ICOX','sPLS-DRCOX','sPLS-DRCOX-Dynamic', or 'sPLS-DACOX-Dynamic'.")
   }
 
+  #### ### #
+  # SCORES #
+  #### ### #
   if(mode=="scores"){
 
     if(ncol(aux.model$X$scores)==1){
@@ -2270,8 +2311,25 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
 
       FLAG_1_COMP = TRUE
 
-      df <- cbind(aux.model$X$scores[,1], aux.model$X$scores[,1])
-      colnames(df) <- c("p1", "p2")
+      df <- cbind(aux.model$X$scores[,1])
+      colnames(df) <- c("p1")
+
+      ggp <- plot_pls_1comp(matrix = df, mode = "scores", factor_col = factor, n_top = top)
+
+      if("R2" %in% names(aux.model)){
+        txt.expression <- paste0("Scores (",attr(aux.model, "model"),") - ")
+        r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+        r2 <- round(sum(unlist(aux.model$R2)), 4)
+        ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+            ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+      }else{
+          txt.expression <- paste0("Scores (",attr(aux.model, "model"),")")
+          ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+            ylab(label = paste0("comp_",as.character(1)))
+      }
+
+      return(list(plot = ggp, outliers = NULL))
+
     }else{
       df <- as.data.frame(aux.model$X$scores)
     }
@@ -2293,26 +2351,14 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
       r2_1 <- round(model$R2[[comp[1]]], 4)
       r2_2 <- round(model$R2[[comp[2]]], 4)
       r2 <- round(sum(unlist(model$R2)), 4)
-      if(FLAG_1_COMP){
-        ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
-          xlab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)")) +
-          ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_2*100), " %)"))
-      }else{
-        ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
-          xlab(label = paste0("comp_",as.character(comp[1]), " (", as.character(r2_1*100), " %)")) +
-          ylab(label = paste0("comp_",as.character(comp[2]), " (", as.character(r2_2*100), " %)"))
-      }
+      ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+        xlab(label = paste0("comp_",as.character(comp[1]), " (", as.character(r2_1*100), " %)")) +
+        ylab(label = paste0("comp_",as.character(comp[2]), " (", as.character(r2_2*100), " %)"))
     }else{
       txt.expression <- paste0("Scores (",attr(aux.model, "model"),")")
-      if(FLAG_1_COMP){
-        ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
-          xlab(label = paste0("comp_",as.character(1))) +
-          ylab(label = paste0("comp_",as.character(1)))
-      }else{
-        ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
-          xlab(label = paste0("comp_",as.character(comp[1]))) +
-          ylab(label = paste0("comp_",as.character(comp[2])))
-      }
+      ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+        xlab(label = paste0("comp_",as.character(comp[1]))) +
+        ylab(label = paste0("comp_",as.character(comp[2])))
     }
 
     if(requireNamespace("RColorConesa", quietly = TRUE)){
@@ -2321,6 +2367,9 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
         RColorConesa::scale_fill_conesa(reverse = colorReverse)
     }
 
+  #### ### ###
+  # LOADINGS #
+  #### ### ###
   }else if(mode=="loadings"){
 
     if(ncol(aux.model$X$loadings)==1){
@@ -2328,8 +2377,24 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
 
       FLAG_1_COMP = TRUE
 
-      df <- as.data.frame(cbind(aux.model$X$loadings,aux.model$X$loadings))
-      colnames(df) <- c("p1", "p2")
+      df <- cbind(aux.model$X$loadings[,1])
+      colnames(df) <- c("p1")
+
+      ggp <- plot_pls_1comp(matrix = df, mode = "loadings", n_top = top)
+
+      if("R2" %in% names(aux.model)){
+        txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ")
+        r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+        r2 <- round(sum(unlist(aux.model$R2)), 4)
+        ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+          ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+      }else{
+        txt.expression <- paste0("Loadings (",attr(aux.model, "model"),")")
+        ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+          ylab(label = paste0("comp_",as.character(1)))
+      }
+
+      return(list(plot = ggp, outliers = NULL))
 
     }else{
       df <- as.data.frame(aux.model$X$loadings)
@@ -2397,18 +2462,49 @@ plot_Coxmos.PLS.model <- function(model, comp = c(1,2), mode = "scores", factor 
       }
     }
 
+  #### ### #
+  # BIPLOT #
+  #### ### #
   }else if(mode=="biplot"){
     if(ncol(aux.model$X$loadings)==1){
       message("The model has only 1 component")
 
       FLAG_1_COMP = TRUE
 
-      df <- as.data.frame(cbind(aux.model$X$scores, aux.model$X$scores))
-      colnames(df) <- c("p1", "p2")
+      df <- cbind(aux.model$X$loadings[,1])
+      colnames(df) <- c("p1")
+      ggp_loadings <- plot_pls_1comp(matrix = df, mode = "loadings", n_top = top)
 
-      df_loading <- as.data.frame(cbind(aux.model$X$loadings[,1], aux.model$X$loadings[,1]))
-      max.loadings <- apply(abs(df_loading), 2, max)
-      max.scores <- apply(abs(df), 2, max)
+      df <- cbind(aux.model$X$scores[,1])
+      colnames(df) <- c("p1")
+      LIMIT_SCORES <- 200
+      if(nrow(df)>LIMIT_SCORES){
+        top <- LIMIT_SCORES
+      }else{
+        top <- NULL
+      }
+      ggp_scores <- plot_pls_1comp(matrix = df, mode = "scores", factor_col = factor, n_top = top)
+
+      if("R2" %in% names(aux.model)){
+        txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ")
+        r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+        r2 <- round(sum(unlist(aux.model$R2)), 4)
+        # ggp_loadings <- ggp_loadings + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+        #   ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+        ggp_scores <- ggp_scores + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+          ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+      }else{
+        txt.expression <- paste0("Loadings (",attr(aux.model, "model"),")")
+        # ggp_loadings <- ggp_loadings + ggtitle(label = bquote(.(txt.expression))) +
+        #   ylab(label = paste0("comp_",as.character(1)))
+        ggp_scores <- ggp_scores + ggtitle(label = bquote(.(txt.expression))) +
+          ylab(label = paste0("comp_",as.character(1)))
+      }
+
+      pp <- ggpubr::ggarrange(ggp_scores, ggp_loadings, ncol = 2, widths = c(0.5, 0.5), align = "h")
+
+      return(list(plot = pp, outliers = NULL))
+
     }else{
       df <- as.data.frame(aux.model$X$scores)
 
@@ -2620,32 +2716,68 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 
       FLAG_1_COMP = FALSE
 
+      ### ### ###
+      ### SCORES #
+      ### ### ###
       if(mode=="scores"){
 
-        if(attr(aux.model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
-          if(ncol(aux.model[[4]][[block]]$X$scores)==1){
+        if(attr(aux.model, "model") %in% c(pkg.env$singleblock_methods)){
+          if(ncol(aux.model$list_spls_models[[block]]$X$scores)==1){
             message("The model has only 1 component")
 
             FLAG_1_COMP = TRUE
 
-            df <- cbind(aux.model[[4]][[block]]$X$scores[,1], aux.model[[4]][[block]]$X$scores[,1])
-            colnames(df) <- c("p1", "p2")
+            df <- cbind(aux.model$list_spls_models[[block]]$X$scores[,1])
+            colnames(df) <- c("p1")
+
+            ggp <- plot_pls_1comp(matrix = df, mode = "scores", factor_col = factor, n_top = top)
+
+            if("R2" %in% names(aux.model)){
+              txt.expression <- paste0("Scores (",attr(aux.model, "model"),") - ")
+              r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+              r2 <- round(sum(unlist(aux.model$R2)), 4)
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+                ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+            }else{
+              txt.expression <- paste0("Scores (",attr(aux.model, "model"),")")
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+                ylab(label = paste0("comp_",as.character(1)))
+            }
+
+            return(list(plot = ggp, outliers = NULL))
           }else{
-            df <- as.data.frame(aux.model[[4]][[block]]$X$scores)
+            df <- as.data.frame(aux.model$list_spls_models[[block]]$X$scores)
           }
         }else{ #multiblock
           if(ncol(aux.model$X$scores[[block]])==1){
+
             message("The model has only 1 component")
 
             FLAG_1_COMP = TRUE
 
-            df <- cbind(aux.model$X$scores[[block]][,1], aux.model$X$scores[[block]][,1])
-            colnames(df) <- c("p1", "p2")
+            df <- cbind(aux.model$X$scores[[block]][,1])
+            colnames(df) <- c("p1")
+
+            ggp <- plot_pls_1comp(matrix = df, mode = "scores", factor_col = factor, n_top = top)
+
+            if("R2" %in% names(aux.model)){
+              txt.expression <- paste0("Scores (",attr(aux.model, "model"),") - ")
+              r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+              r2 <- round(sum(unlist(aux.model$R2)), 4)
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+                ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+            }else{
+              txt.expression <- paste0("Scores (",attr(aux.model, "model"),")")
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+                ylab(label = paste0("comp_",as.character(1)))
+            }
+
+            return(list(plot = ggp, outliers = NULL))
+
           }else{
             df <- as.data.frame(aux.model$X$scores[[block]])
           }
         }
-
 
         subdata_loading = NULL
         ggp <- ggplot(as.data.frame(df))
@@ -2661,8 +2793,8 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 
         if("R2" %in% names(model)){
           txt.expression <- paste0("Scores (",attr(aux.model, "model"),") - ", block, " - ")
-          r2_1 <- round(model$R2[[comp[1]]], 4)
-          r2_2 <- round(model$R2[[comp[2]]], 4)
+          r2_1 <- round(model$R2[[block]][[comp[1]]], 4)
+          r2_2 <- round(model$R2[[block]][[comp[2]]], 4)
           r2 <- round(sum(r2_1, r2_2), 4)
 
           if(FLAG_1_COMP){
@@ -2696,18 +2828,37 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
             RColorConesa::scale_fill_conesa(reverse = colorReverse)
         }
 
+      #### ### ### #
+      ### LOADINGS #
+      #### ### ### #
       }else if(mode=="loadings"){
 
-        if(attr(aux.model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
-          if(ncol(aux.model[[4]][[block]]$X$loadings)==1){
+        if(attr(aux.model, "model") %in% c(pkg.env$singleblock_methods)){
+          if(ncol(aux.model$list_spls_models[[block]]$X$loadings)==1){
             message("The model has only 1 component")
 
             FLAG_1_COMP = TRUE
 
-            df <- cbind(aux.model[[4]][[block]]$X$loadings[,1], aux.model[[4]][[block]]$X$loadings[,1])
-            colnames(df) <- c("p1", "p2")
+            df <- cbind(aux.model$list_spls_models[[block]]$X$loadings[,1])
+            colnames(df) <- c("p1")
+
+            ggp <- plot_pls_1comp(matrix = df, mode = "loadings", n_top = top)
+
+            if("R2" %in% names(aux.model)){
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ")
+              r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+              r2 <- round(sum(unlist(aux.model$R2)), 4)
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+                ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+            }else{
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),")")
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+                ylab(label = paste0("comp_",as.character(1)))
+            }
+
+            return(list(plot = ggp, outliers = NULL))
           }else{
-            df <- as.data.frame(aux.model[[4]][[block]]$X$loadings)
+            df <- as.data.frame(aux.model$list_spls_models[[block]]$X$loadings)
           }
         }else{ #multiblock
           if(ncol(aux.model$X$loadings[[block]])==1){
@@ -2715,8 +2866,25 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 
             FLAG_1_COMP = TRUE
 
-            df <- cbind(aux.model$X$loadings[[block]][,1], aux.model$X$loadings[[block]][,1])
-            colnames(df) <- c("p1", "p2")
+            df <- cbind(aux.model$X$loadings[[block]][,1])
+            colnames(df) <- c("p1")
+
+            ggp <- plot_pls_1comp(matrix = df, mode = "loadings", n_top = top)
+
+            if("R2" %in% names(aux.model)){
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ")
+              r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+              r2 <- round(sum(unlist(aux.model$R2)), 4)
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+                ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+            }else{
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),")")
+              ggp <- ggp + ggtitle(label = bquote(.(txt.expression))) +
+                ylab(label = paste0("comp_",as.character(1)))
+            }
+
+            return(list(plot = ggp, outliers = NULL))
+
           }else{
             df <- as.data.frame(aux.model$X$loadings[[block]])
           }
@@ -2750,8 +2918,8 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 
         if("R2" %in% names(model)){
           txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ", block, " - ")
-          r2_1 <- round(model$R2[[comp[1]]], 4)
-          r2_2 <- round(model$R2[[comp[2]]], 4)
+          r2_1 <- round(model$R2[[block]][[comp[1]]], 4)
+          r2_2 <- round(model$R2[[block]][[comp[2]]], 4)
           r2 <- round(sum(r2_1, r2_2), 4)
           if(FLAG_1_COMP){
             ggp <- ggp + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
@@ -2788,27 +2956,62 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
           }
         }
 
+      #### ### ### #
+      ### BIPLOTS #
+      #### ### ### #
       }else if(mode=="biplot"){
 
-
-        if(attr(aux.model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
-          if(ncol(aux.model[[4]][[block]]$X$loadings)==1){
+        if(attr(aux.model, "model") %in% c(pkg.env$singleblock_methods)){
+          if(ncol(aux.model$list_spls_models[[block]]$X$loadings)==1){
             message("The model has only 1 component")
 
             FLAG_1_COMP = TRUE
 
-            df <- as.data.frame(cbind(aux.model[[4]][[block]]$X$scores, aux.model[[4]][[block]]$X$scores))
-            colnames(df) <- c("p1", "p2")
+            df <- cbind(aux.model$list_spls_models[[block]]$X$loadings[,1])
+            colnames(df) <- c("p1")
+            ggp_loadings <- plot_pls_1comp(matrix = df, mode = "loadings", n_top = top)
 
-            df_loading <- as.data.frame(cbind(aux.model[[4]][[block]]$X$loadings[,1], aux.model[[4]][[block]]$X$loadings[,1]))
-            max.loadings <- apply(abs(df_loading), 2, max)
-            max.scores <- apply(abs(df), 2, max)
+            df <- cbind(aux.model$list_spls_models[[block]]$X$scores[,1])
+            colnames(df) <- c("p1")
+            LIMIT_SCORES <- 200
+            if(nrow(df)>LIMIT_SCORES){
+              top <- LIMIT_SCORES
+            }else{
+              top <- NULL
+            }
+            ggp_scores <- plot_pls_1comp(matrix = df, mode = "scores", factor_col = factor, n_top = top)
+
+            if("R2" %in% names(aux.model)){
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ")
+              r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+              r2 <- round(sum(unlist(aux.model$R2)), 4)
+              # ggp_loadings <- ggp_loadings + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+              #   ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+              ggp_scores <- ggp_scores + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+                ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+            }else{
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),")")
+              # ggp_loadings <- ggp_loadings + ggtitle(label = bquote(.(txt.expression))) +
+              #   ylab(label = paste0("comp_",as.character(1)))
+              ggp_scores <- ggp_scores + ggtitle(label = bquote(.(txt.expression))) +
+                ylab(label = paste0("comp_",as.character(1)))
+            }
+
+            pp <- ggpubr::ggarrange(ggp_scores, ggp_loadings, ncol = 2, widths = c(0.5, 0.5), align = "h")
+
+            return(list(plot = pp, outliers = NULL))
           }else{
-            df <- as.data.frame(aux.model[[4]][[block]]$X$scores)
+            df <- as.data.frame(aux.model$list_spls_models[[block]]$X$scores)
 
-            df_loading <- as.data.frame(aux.model[[4]][[block]]$X$loadings)
+            df_loading <- as.data.frame(aux.model$list_spls_models[[block]]$X$loadings)
             max.loadings <- apply(abs(df_loading), 2, max)
             max.scores <- apply(abs(df), 2, max)
+
+            # Escalar los loadings para ajustarlos a los scores
+            factor_escala <- max.scores / max.loadings
+            df_loading <- as.matrix(df_loading) %*% diag(factor_escala)
+            df_loading <- as.data.frame(df_loading)
+            colnames(df_loading) <- names(factor_escala)
           }
         }else{ #multiblock
           if(ncol(aux.model$X$loadings[[block]])==1){
@@ -2816,23 +3019,60 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 
             FLAG_1_COMP = TRUE
 
-            df <- as.data.frame(cbind(aux.model$X$scores[[block]], aux.model$X$scores[[block]]))
-            colnames(df) <- c("p1", "p2")
+            df <- cbind(aux.model$X$loadings[[block]][,1])
+            colnames(df) <- c("p1")
+            ggp_loadings <- plot_pls_1comp(matrix = df, mode = "loadings", n_top = top)
 
-            df_loading <- as.data.frame(cbind(aux.model$X$loadings[[block]][,1], aux.model$X$loadings[[block]][,1]))
-            max.loadings <- apply(abs(df_loading), 2, max)
-            max.scores <- apply(abs(df), 2, max)
+            df <- cbind(aux.model$X$scores[[block]][,1])
+            colnames(df) <- c("p1")
+            LIMIT_SCORES <- 200
+            if(nrow(df)>LIMIT_SCORES){
+              top <- LIMIT_SCORES
+            }else{
+              top <- NULL
+            }
+            ggp_scores <- plot_pls_1comp(matrix = df, mode = "scores", factor_col = factor, n_top = top)
+
+            if("R2" %in% names(aux.model)){
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),") - ")
+              r2_1 <- round(aux.model$R2[[comp[1]]], 4)
+              r2 <- round(sum(unlist(aux.model$R2)), 4)
+              # ggp_loadings <- ggp_loadings + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+              #   ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+              ggp_scores <- ggp_scores + ggtitle(label = bquote(.(txt.expression) ~R^2 == .(r2))) +
+                ylab(label = paste0("comp_",as.character(1), " (", as.character(r2_1*100), " %)"))
+            }else{
+              txt.expression <- paste0("Loadings (",attr(aux.model, "model"),")")
+              # ggp_loadings <- ggp_loadings + ggtitle(label = bquote(.(txt.expression))) +
+              #   ylab(label = paste0("comp_",as.character(1)))
+              ggp_scores <- ggp_scores + ggtitle(label = bquote(.(txt.expression))) +
+                ylab(label = paste0("comp_",as.character(1)))
+            }
+
+            pp <- ggpubr::ggarrange(ggp_scores, ggp_loadings, ncol = 2, widths = c(0.5, 0.5), align = "h")
+
+            return(list(plot = pp, outliers = NULL))
+
           }else{
             df <- as.data.frame(aux.model$X$scores[[block]])
 
             df_loading <- as.data.frame(aux.model$X$loadings[[block]])
+            #sometimes all 0s
+            df_loading <- df_loading[which(rowSums(df_loading) != 0),]
+
             max.loadings <- apply(abs(df_loading), 2, max)
             max.scores <- apply(abs(df), 2, max)
+
+            # Escalar los loadings para ajustarlos a los scores
+            factor_escala <- max.scores / max.loadings
+            df_loading <- as.matrix(df_loading) %*% diag(factor_escala)
+            df_loading <- as.data.frame(df_loading)
+            colnames(df_loading) <- names(factor_escala)
           }
         }
 
         #scale scores to -1,1
-        df <- norm01(df[,comp])*2-1
+        # df <- norm01(df[,comp])*2-1
         ggp <- ggplot(as.data.frame(df))
 
         if(nrow(df) > MAX_POINTS){
@@ -2846,8 +3086,8 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 
         if("R2" %in% names(model)){
           txt.expression <- paste0("Biplot (",attr(aux.model, "model"),") - ", block, " - ")
-          r2_1 <- round(model$R2[[comp[1]]], 4)
-          r2_2 <- round(model$R2[[comp[2]]], 4)
+          r2_1 <- round(model$R2[[block]][[comp[1]]], 4)
+          r2_2 <- round(model$R2[[block]][[comp[2]]], 4)
           r2 <- round(sum(r2_1, r2_2), 4)
 
           if(FLAG_1_COMP){
@@ -2966,7 +3206,8 @@ plot_Coxmos.MB.PLS.model <- function(model, comp = c(1,2), mode = "scores", fact
 #' X <- X_proteomic[,1:50]
 #' Y <- Y_proteomic
 #' splsicox.model <- splsicox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
+#' splsdrcox.model <- splsdrcox_penalty(X, Y, n.comp = 2, penalty = 0.5,
+#' x.center = TRUE, x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' plot_proportionalHazard.list(lst_models)
 
@@ -3130,7 +3371,8 @@ my_primeFactors <- function(num) {
 #' X <- X_proteomic[,1:50]
 #' Y <- Y_proteomic
 #' splsicox.model <- splsicox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
+#' splsdrcox.model <- splsdrcox_penalty(X, Y, n.comp = 2, penalty = 0.5,
+#' x.center = TRUE, x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' plot_forest.list(lst_models)
 
@@ -3255,7 +3497,8 @@ plot_forest <- function(model,
 #' X <- X_proteomic[,1:50]
 #' Y <- Y_proteomic
 #' splsicox.model <- splsicox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
+#' splsdrcox.model <- splsdrcox_penalty(X, Y, n.comp = 2, penalty = 0.5,
+#' x.center = TRUE, x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' plot_cox.event.list(lst_models)
 
@@ -3592,7 +3835,8 @@ plot_observation.eventHistogram <- function(observation, model, time = NULL, typ
 #' X <- X_proteomic[,1:50]
 #' Y <- Y_proteomic
 #' splsicox.model <- splsicox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X, Y, n.comp = 2, penalty = 0.5, x.center = TRUE, x.scale = TRUE)
+#' splsdrcox.model <- splsdrcox_penalty(X, Y, n.comp = 2, penalty = 0.5,
+#' x.center = TRUE, x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' plot_pseudobeta.list(lst_models = lst_models)
 
@@ -3612,11 +3856,15 @@ plot_pseudobeta.list <- function(lst_models, error.bar = TRUE, onlySig = FALSE, 
     }
   }
 
-  lst_plots <- purrr::map(sub_lst_models, ~plot_pseudobeta(model = .,
-                                                           error.bar = error.bar,
-                                                           onlySig = onlySig, alpha = alpha,
-                                                           zero.rm = zero.rm, auto.limits = auto.limits, top = top,
-                                                           show_percentage = show_percentage, size_percentage = size_percentage))
+  if(length(sub_lst_models)!=0){
+    lst_plots <- purrr::map(sub_lst_models, ~plot_pseudobeta(model = .,
+                                                             error.bar = error.bar,
+                                                             onlySig = onlySig, alpha = alpha,
+                                                             zero.rm = zero.rm, auto.limits = auto.limits, top = top,
+                                                             show_percentage = show_percentage, size_percentage = size_percentage))
+  }else{
+    lst_plots <- NULL
+  }
 
   return(lst_plots)
 }
@@ -3687,7 +3935,7 @@ plot_pseudobeta <- function(model, error.bar = TRUE, onlySig = FALSE, alpha = 0.
                             show_percentage = TRUE, size_percentage = 3,
                             title_size_text = 15, legend_size_text  = 12,
                             x_axis_size_text  = 10, y_axis_size_text = 10,
-                            label_x_axis_size  = 10, label_y_axis_size  = 10){
+                            label_x_axis_size  = 10, label_y_axis_size = 10){
 
   if(!isa(model,pkg.env$model_class)){
     warning("Model must be an object of class Coxmos.")
@@ -3756,7 +4004,7 @@ plot_pseudobeta <- function(model, error.bar = TRUE, onlySig = FALSE, alpha = 0.
       coefficients <- as.matrix(model$survival_model$fit$coefficients)[rn,,drop = FALSE]
       sd <- df.aux[rn,"se(coef)",drop = FALSE]
       W.star <- list()
-      if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$isb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsdrcox)){
+      if(attr(model, "model") %in% c(pkg.env$singleblock_methods)){
         for(b in names(model$list_spls_models)){
           W.star[[b]] <- model$list_spls_models[[b]]$X$W.star
         }
@@ -3768,7 +4016,7 @@ plot_pseudobeta <- function(model, error.bar = TRUE, onlySig = FALSE, alpha = 0.
       coefficients <- as.matrix(model$survival_model$fit$coefficients)
       sd <- df.aux[,"se(coef)",drop = FALSE]
       W.star <- list()
-      if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$isb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsdrcox)){
+      if(attr(model, "model") %in% c(pkg.env$singleblock_methods)){
         for(b in names(model$list_spls_models)){
           W.star[[b]] <- model$list_spls_models[[b]]$X$W.star
         }
@@ -3905,7 +4153,7 @@ plot_pseudobeta <- function(model, error.bar = TRUE, onlySig = FALSE, alpha = 0.
 #' Y_test <- Y_proteomic[-index_train,]
 #' splsicox.model <- splsicox(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
+#' splsdrcox.model <- splsdrcox_penalty(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' plot_pseudobeta_newObservation.list(lst_models, new_observation = X_test[1,,drop=FALSE])
@@ -4031,6 +4279,9 @@ plot_pseudobeta_newObservation <- function(model, new_observation, error.bar = T
 plot_pseudobeta.newObservation <- function(model, new_observation, error.bar = TRUE, onlySig = TRUE,
                                        alpha = 0.05, zero.rm = TRUE,
                                        top = NULL, auto.limits = TRUE, show.betas = FALSE){
+
+  #check colnames and transform
+  new_observation <- checkColnamesIllegalChars(new_observation)
 
   if(!isa(model,pkg.env$model_class)){
     warning("Model must be an object of class Coxmos.")
@@ -4222,6 +4473,9 @@ plot_pseudobeta.newObservation <- function(model, new_observation, error.bar = T
 plot_MB.pseudobeta.newObservation <- function(model, new_observation, error.bar = TRUE, onlySig = TRUE,
                                           alpha = 0.05, zero.rm = TRUE,
                                           top = NULL, auto.limits = TRUE, show.betas = FALSE){
+
+  #check colnames and transform
+  new_observation <- checkColnamesIllegalChars.mb(new_observation)
 
   if(!isa(model,pkg.env$model_class)){
     warning("Model must be an object of class Coxmos.")
@@ -4433,6 +4687,8 @@ plot_MB.pseudobeta.newObservation <- function(model, new_observation, error.bar 
 #' If BREAKTIME = NULL, "n.breaks" is used (default: NULL).
 #' @param n.breaks Numeric. If BREAKTIME is NULL, "n.breaks" is the number of time-break points to
 #' compute (default: 20).
+#' @param minProp Numeric. Minimum proportion rate (0-1) for the group of lesser observation when computing
+#' an optimal cutoff for numerical variables (default: 0.2).
 #' @param only_sig Logical. If "only_sig" = TRUE, then only significant log-rank test variables are
 #' returned (default: FALSE).
 #' @param alpha Numeric. Numerical values are regarded as significant if they fall below the
@@ -4454,22 +4710,24 @@ plot_MB.pseudobeta.newObservation <- function(model, new_observation, error.bar 
 #'
 #' @examples
 #' data("X_proteomic")
-#' data("Y_proteomic")
+#'
+#' X_proteomic <- X_proteomic[1:30,1:20]
+#' Y_proteomic <- Y_proteomic[1:30,]
 #' set.seed(123)
 #' index_train <- caret::createDataPartition(Y_proteomic$event, p = .5, list = FALSE, times = 1)
-#' X_train <- X_proteomic[index_train,1:20]
+#' X_train <- X_proteomic[index_train,]
 #' Y_train <- Y_proteomic[index_train,]
-#' X_test <- X_proteomic[-index_train,1:20]
+#' X_test <- X_proteomic[-index_train,]
 #' Y_test <- Y_proteomic[-index_train,]
 #' splsicox.model <- splsicox(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
+#' splsdrcox.model <- splsdrcox_penalty(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' getAutoKM.list(type = "LP", lst_models)
 
 getAutoKM.list <- function(type = "LP", lst_models, comp = 1:2, top = NULL, ori_data = TRUE,
-                           BREAKTIME = NULL, n.breaks = 20, only_sig = FALSE, alpha = 0.05, title = NULL,
+                           BREAKTIME = NULL, n.breaks = 20, minProp = 0.2, only_sig = FALSE, alpha = 0.05, title = NULL,
                            verbose = FALSE){
 
   #check names in lst_models
@@ -4480,7 +4738,7 @@ getAutoKM.list <- function(type = "LP", lst_models, comp = 1:2, top = NULL, ori_
   }
 
   if(type %in% c("LP")){
-    lst <- purrr::map(lst_models, ~getLPKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    lst <- purrr::map(lst_models, ~getLPKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }else if(type == "COMP"){
 
     if(all(unlist(purrr::map(lst_models, function(x){x$class})) %in% c(pkg.env$pls_methods, pkg.env$multiblock_methods))){
@@ -4492,11 +4750,11 @@ getAutoKM.list <- function(type = "LP", lst_models, comp = 1:2, top = NULL, ori_
       }
     }
 
-    lst <- purrr::map(sub_lst_models, ~getCompKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    lst <- purrr::map(sub_lst_models, ~getCompKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }else if(type == "VAR"){
-    lst <- purrr::map(lst_models, ~getVarKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    lst <- purrr::map(lst_models, ~getVarKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }else if(type == "LPVAR"){
-    lst <- purrr::map(lst_models, ~getLPVarKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    lst <- purrr::map(lst_models, ~getLPVarKM(model = ., comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }
   return(lst)
 }
@@ -4535,6 +4793,8 @@ getAutoKM.list <- function(type = "LP", lst_models, comp = 1:2, top = NULL, ori_
 #' If BREAKTIME = NULL, "n.breaks" is used (default: NULL).
 #' @param n.breaks Numeric. If BREAKTIME is NULL, "n.breaks" is the number of time-break points to
 #' compute (default: 20).
+#' @param minProp Numeric. Minimum proportion rate (0-1) for the group of lesser observation when computing
+#' an optimal cutoff for numerical variables (default: 0.2).
 #' @param only_sig Logical. If "only_sig" = TRUE, then only significant log-rank test variables are
 #' returned (default: FALSE).
 #' @param alpha Numeric. Numerical values are regarded as significant if they fall below the
@@ -4568,7 +4828,8 @@ getAutoKM.list <- function(type = "LP", lst_models, comp = 1:2, top = NULL, ori_
 #' getAutoKM(type = "LP", model = splsicox.model)
 
 getAutoKM <- function(type = "LP", model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL,
-                      n.breaks = 20, only_sig = FALSE, alpha = 0.05, title = NULL, verbose = FALSE){
+                      n.breaks = 20, minProp = 0.2, only_sig = FALSE, alpha = 0.05, title = NULL, verbose = FALSE){
+
   if(!type %in% c("LP", "COMP", "VAR")){
     stop("Type parameters must be one of the following: LP, COMP or VAR")
   }
@@ -4584,17 +4845,17 @@ getAutoKM <- function(type = "LP", model, comp = 1:2, top = 10, ori_data = TRUE,
   }
 
   if(type == "LP"){
-    return(getLPKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    return(getLPKM(model = model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }else if(type == "COMP"){
-    return(getCompKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    return(getCompKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }else if(type == "VAR"){
-    return(getVarKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    return(getVarKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }else if(type == "LPVAR"){
-    return(getLPVarKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
+    return(getLPVarKM(model, comp = comp, top = top, ori_data = ori_data, BREAKTIME = BREAKTIME, n.breaks = n.breaks, minProp = minProp, only_sig = only_sig, alpha = alpha, title = title, verbose = verbose))
   }
 }
 
-getLPKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20,
+getLPKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20, minProp = 0.2,
                     only_sig = FALSE, alpha = 0.05, title = NULL, verbose = FALSE){
 
   if(length(comp)==1){
@@ -4623,8 +4884,9 @@ getLPKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NU
   colnames(vars_data) <- "LP"
 
   vars_num <- vars_data
+  vars_num <- round(vars_num, 10)
   if(all(dim(vars_num)>0)){
-    info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+    info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
   }else{
     info_logrank_num <- NULL
   }
@@ -4651,7 +4913,7 @@ getLPKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NU
 
 }
 
-getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20,
+getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20, minProp = 0.2,
                       only_sig = FALSE, alpha = 0.05, title = NULL, verbose = FALSE){
 
   if(length(comp)==1){
@@ -4676,7 +4938,7 @@ getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = 
 
     if(!all(is.null(model$survival_model))){
       for(b in names(model$X$data)){
-        if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
+        if(attr(model, "model") %in% c(pkg.env$singleblock_methods)){
           lst_vars[[b]] <- colnames(model[[4]][[b]]$X$W.star)
           keep <- which(paste0(lst_vars[[b]],"_",b) %in% names(model$survival_model$fit$coefficients))
           lst_vars[[b]] <- lst_vars[[b]][keep]
@@ -4703,64 +4965,63 @@ getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = 
 
   #select original or scale data - top X of each component, takes all of them
   if(!attr(model, "model") %in% pkg.env$multiblock_methods){
+
+    #together
     unique_vars <- deleteIllegalChars(unique(unlist(vars)))
-    # vars %*% coeff to get component LP
-    cn_aux <- colnames(as.data.frame(model$X$scores[rownames(model$X$scores),unique_vars,drop = FALSE]))
-    sc_aux <- as.data.frame(model$X$scores[rownames(model$X$scores),unique_vars,drop = FALSE])
-    coeff_aux <- model$survival_model$fit$coefficients[cn_aux]
+    unique_vars <- transformIllegalChars(unique_vars)
+
+    # scores as predict.Coxmos
+    scores_train <- predict.Coxmos(object = model)
+    coeff_aux <- model$survival_model$fit$coefficients
     if(length(names(coeff_aux))>1){
       vars_data <- NULL
-      for(cn in colnames(sc_aux)){
-        vars_data <- cbind(vars_data, as.matrix(sc_aux[,cn,drop = FALSE]) %*% coeff_aux[cn])
+      for(cn in colnames(scores_train)){
+        vars_data <- cbind(vars_data, scores_train[,cn,drop=F] %*% coeff_aux[cn])
       }
       colnames(vars_data) <- names(unique_vars)
     }else{
-      vars_data <- as.matrix(sc_aux) %*% coeff_aux
+      vars_data <- scores_train %*% coeff_aux
       colnames(vars_data) <- names(unique_vars)
     }
   }else{
     vars_data <- list()
     for(b in names(model$X$data)){
       # vars %*% coeff to get component LP
+
+      if(length(lst_vars[[b]])==0){next}#no components selected
+
+      #together
       unique_vars <- deleteIllegalChars(unique(unlist(lst_vars[[b]])))
-      if(length(unique_vars)==0){next}#no components selected
-      if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
-        cn_aux <- colnames(as.data.frame(model[[4]][[b]]$X$scores[rownames(model[[4]][[b]]$X$scores),unique_vars,drop = FALSE]))
-        sc_aux <- as.data.frame(model[[4]][[b]]$X$scores[rownames(model[[4]][[b]]$X$scores),unique_vars,drop = FALSE])
-        coeff_aux <- model$survival_model$fit$coefficients[paste0(cn_aux, "_", b)]
+      unique_vars <- transformIllegalChars(unique_vars)
+      unique_vars_b <- paste0(unique_vars, "_", b)
+
+      if(attr(model, "model") %in% c(pkg.env$singleblock_methods)){
+        scores_train <- predict.Coxmos(object = model)
+        scores_train <- scores_train[,unique_vars_b,drop=F]
+        coeff_aux <- model$survival_model$fit$coefficients[unique_vars_b]
         if(length(names(coeff_aux))>1){
           vars_data[[b]] <- NULL
-          # if coeff_aux has comp_1_genes and comp_10_genes, both start by comp_1
-          # new colnames vector to match
-          new_coeff_names <- names(coeff_aux)
-          new_coeff_names <- unlist(lapply(new_coeff_names, function(x){paste0(strsplit(x, "_")[[1]][1], "_", strsplit(x, "_")[[1]][2])}))
-          for(cn in colnames(sc_aux)){
-            idx <- which(new_coeff_names %in% cn)
-            vars_data[[b]] <- cbind(vars_data[[b]], as.matrix(sc_aux[,cn,drop = FALSE]) %*% coeff_aux[idx])
+          for(cn in colnames(scores_train)){
+            vars_data[[b]] <- cbind(vars_data[[b]], as.matrix(scores_train[,cn,drop = FALSE]) %*% coeff_aux[cn])
           }
-          colnames(vars_data[[b]]) <- names(unique_vars)
+          colnames(vars_data[[b]]) <- unique_vars
         }else{
-          vars_data[[b]] <- as.matrix(sc_aux) %*% coeff_aux
-          colnames(vars_data[[b]]) <- names(unique_vars)
+          vars_data[[b]] <- as.matrix(scores_train) %*% coeff_aux
+          colnames(vars_data[[b]]) <- unique_vars
         }
       }else{
-        cn_aux <- colnames(as.data.frame(model$X$scores[[b]][rownames(model$X$scores[[b]]),unique_vars,drop = FALSE]))
-        sc_aux <- as.data.frame(model$X$scores[[b]][rownames(model$X$scores[[b]]),unique_vars,drop = FALSE])
-        coeff_aux <- model$survival_model$fit$coefficients[paste0(cn_aux, "_", b)]
+        scores_train <- predict.Coxmos(object = model)
+        scores_train <- scores_train[,unique_vars_b,drop=F]
+        coeff_aux <- model$survival_model$fit$coefficients[unique_vars_b]
         if(length(names(coeff_aux))>1){
           vars_data[[b]] <- NULL
-          # if coeff_aux has comp_1_genes and comp_10_genes, both start by comp_1
-          # new colnames vector to match
-          new_coeff_names <- names(coeff_aux)
-          new_coeff_names <- unlist(lapply(new_coeff_names, function(x){paste0(strsplit(x, "_")[[1]][1], "_", strsplit(x, "_")[[1]][2])}))
-          for(cn in colnames(sc_aux)){
-            idx <- which(new_coeff_names %in% cn)
-            vars_data[[b]] <- cbind(vars_data[[b]], as.matrix(sc_aux[,cn,drop = FALSE]) %*% coeff_aux[idx])
+          for(cn in colnames(scores_train)){
+            vars_data[[b]] <- cbind(vars_data[[b]], as.matrix(scores_train[,cn,drop = FALSE]) %*% coeff_aux[cn])
           }
-          colnames(vars_data[[b]]) <- names(unique_vars)
+          colnames(vars_data[[b]]) <- unique_vars
         }else{
-          vars_data[[b]] <- as.matrix(sc_aux) %*% coeff_aux
-          colnames(vars_data[[b]]) <- names(unique_vars)
+          vars_data[[b]] <- as.matrix(scores_train) %*% coeff_aux
+          colnames(vars_data[[b]]) <- unique_vars
         }
       }
     }
@@ -4768,9 +5029,10 @@ getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = 
 
   if(!attr(model, "model") %in% pkg.env$multiblock_methods){
     vars_num <- vars_data
+    vars_num <- round(vars_num, 10)
 
     if(all(dim(vars_num)>0)){
-      info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+      info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
     }else{
       info_logrank_num <- NULL
     }
@@ -4782,7 +5044,7 @@ getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = 
       vars_num[[b]] <- vars_data[[b]]
 
       if(all(dim(vars_num[[b]]))>0){
-        info_logrank_num[[b]] <- getLogRank_NumVariables(data = vars_num[[b]], sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+        info_logrank_num[[b]] <- getLogRank_NumVariables(data = vars_num[[b]], sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
       }else{
         info_logrank_num[[b]] <- NULL
       }
@@ -4829,8 +5091,11 @@ getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = 
     LST_SPLOT <- list()
     for(b in names(model$X$data)){
 
+      if(length(lst_vars[[b]])==0){next}#no components selected
+
+      #together
       unique_vars <- deleteIllegalChars(unique(unlist(lst_vars[[b]])))
-      if(length(unique_vars)==0){next}#no components selected
+      unique_vars <- transformIllegalChars(unique_vars)
 
       if(only_sig){
 
@@ -4858,7 +5123,7 @@ getCompKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = 
 
 }
 
-getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20,
+getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20, minProp = 0.2,
                        only_sig = FALSE, alpha = 0.05, title = NULL, verbose = FALSE){
 
   if(length(comp)==1){
@@ -4911,27 +5176,32 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
 
     lst_vars <- list()
     for(b in names(model$X$data)){
-      vars <- list()
 
-      if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$isb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsdrcox)){
-        aux <- model$list_spls_models[[b]]
-      }else if(attr(model, "model") %in% c(pkg.env$mb.splsdrcox, pkg.env$mb.splsdacox)){
-        message("Fix for MB")
-        stop()
-      }
+      #selecting pseudo betas
+      pseudo_betas <- plot_pseudobeta(model = model,
+                                      error.bar = TRUE, onlySig = only_sig, alpha = alpha,
+                                      zero.rm = TRUE, auto.limits = FALSE, top = top,
+                                      show_percentage = FALSE, size_percentage = 3)
+      names_top <- pseudo_betas$plot[[b]]$data$variables
+      pseudo_betas$beta <- pseudo_betas$beta[[b]][names_top,]
 
-      # names(vars) <- as.character(1:length(vars))
-      # lst_vars[[b]] <- vars
-
+      pseudo_betas$plot <- NULL
+      vars <- rownames(pseudo_betas$beta)
+      lst_vars[[b]] <- vars
     }
 
   }
 
   #select original or scale data - top X of each component, takes all of them
   if(!attr(model, "model") %in% pkg.env$multiblock_methods){
+
+    #together
     unique_vars <- deleteIllegalChars(unique(unlist(vars)))
+    unique_vars <- transformIllegalChars(unique_vars)
+
     if(ori_data){
-      vars_data <- as.data.frame(model$X_input[rownames(model$X$data),unique_vars,drop = FALSE])
+      ori_df <- checkColnamesIllegalChars(model$X_input)
+      vars_data <- as.data.frame(ori_df[rownames(model$X$data),unique_vars,drop = FALSE])
     }else{
       vars_data <- as.data.frame(model$X$data[,unique_vars,drop = FALSE])
     }
@@ -4956,9 +5226,16 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
   }else{
     vars_data <- list()
     for(b in names(model$X$data)){
+
+      if(length(lst_vars[[b]])==0){next}#no components selected
+
+      #together
       unique_vars <- deleteIllegalChars(unique(unlist(lst_vars[[b]])))
+      unique_vars <- transformIllegalChars(unique_vars)
+
       if(ori_data){
-        vars_data[[b]] <- as.data.frame(model$X_input[[b]][rownames(model$X$data[[b]]),unique_vars,drop = FALSE])
+        ori_df <- checkColnamesIllegalChars(model$X_input[[b]])
+        vars_data[[b]] <- as.data.frame(ori_df[rownames(model$X$data[[b]]),unique_vars,drop = FALSE])
       }else{
         vars_data[[b]] <- as.data.frame(model$X$data[[b]][,unique_vars,drop = FALSE])
       }
@@ -4973,6 +5250,7 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
     names_qual <- apply(vars_data, 2, function(x){all(x %in% c(0,1))})
     vars_qual <- vars_data[,names_qual,drop = FALSE]
     vars_num <- vars_data[,!names_qual,drop = FALSE]
+    vars_num <- round(vars_num, 10)
 
     if(all(dim(vars_qual)>0)){
       for(cn in colnames(vars_qual)){vars_qual[,cn] <- factor(vars_qual[,cn], levels = c(0, 1))}
@@ -4982,7 +5260,7 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
     }
 
     if(all(dim(vars_num)>0)){
-      info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+      info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
     }else{
       info_logrank_num <- NULL
     }
@@ -4992,6 +5270,9 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
     vars_qual <- list()
     vars_num <- list()
     for(b in names(model$X$data)){
+
+      if(length(lst_vars[[b]])==0){next}#no components selected
+
       names_qual <- apply(vars_data[[b]], 2, function(x){all(x %in% c(0,1))})
       vars_qual[[b]] <- vars_data[[b]][,names_qual,drop = FALSE]
       vars_num[[b]] <- vars_data[[b]][,!names_qual,drop = FALSE]
@@ -5004,7 +5285,7 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
       }
 
       if(all(dim(vars_num[[b]]))>0){
-        info_logrank_num[[b]] <- getLogRank_NumVariables(data = vars_num[[b]], sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+        info_logrank_num[[b]] <- getLogRank_NumVariables(data = vars_num[[b]], sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
       }else{
         info_logrank_num[[b]] <- NULL
       }
@@ -5074,6 +5355,9 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
   }else{
     LST_SPLOT <- list()
     for(b in names(model$X$data)){
+
+      if(length(lst_vars[[b]])==0){next}#no components selected
+
       if(only_sig){
 
         if(length(v_names[[b]][v_names[[b]]$`P-Val (Log Rank)` <= alpha,]$Variable)==0){
@@ -5102,7 +5386,7 @@ getLPVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME =
 
 }
 
-getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20,
+getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = NULL, n.breaks = 20, minProp = 0.2,
                      only_sig = FALSE, alpha = 0.05, title = NULL, verbose = FALSE){
 
   if(length(comp)==1){
@@ -5157,7 +5441,7 @@ getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = N
       vars <- list()
       vars_data <- list()
 
-      if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
+      if(attr(model, "model") %in% c(pkg.env$singleblock_methods)){
         aux <- model$list_spls_models[[b]]
 
         if(!is.null(aux$survival_model)){
@@ -5173,8 +5457,9 @@ getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = N
           next
         }
 
-      }else if(attr(model, "model") %in% c(pkg.env$mb.splsdrcox, pkg.env$mb.splsdacox)){
+      }else if(attr(model, "model") %in% c(pkg.env$multiblock_mixomics_methods)){
 
+        # look for W* or loadings: W* include all rownames with at least one appearing, meanwhile loadings is exact per component
         for(c in comp){
           if(ncol(model$X$W.star[[b]])>=c){
             rn <- rownames(model$X$W.star[[b]][model$X$W.star[[b]][,c]!=0,c,drop = FALSE])
@@ -5194,18 +5479,26 @@ getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = N
 
   #select original or scale data - top X of each component, takes all of them
   if(!attr(model, "model") %in% pkg.env$multiblock_methods){
+    #together
     unique_vars <- deleteIllegalChars(unique(unlist(vars)))
+    unique_vars <- transformIllegalChars(unique_vars)
+
     if(ori_data){
-      vars_data <- as.data.frame(model$X_input[rownames(model$X$data),unique_vars,drop = FALSE])
+      ori_df <- checkColnamesIllegalChars(model$X_input)
+      vars_data <- as.data.frame(ori_df[rownames(model$X$data),unique_vars,drop = FALSE])
     }else{
       vars_data <- as.data.frame(model$X$data[,unique_vars,drop = FALSE])
     }
   }else{
     vars_data <- list()
     for(b in names(model$X$data)){
+      #together
       unique_vars <- deleteIllegalChars(unique(unlist(lst_vars[[b]])))
+      unique_vars <- transformIllegalChars(unique_vars)
+
       if(ori_data){
-        vars_data[[b]] <- as.data.frame(model$X_input[[b]][rownames(model$X$data[[b]]),unique_vars,drop = FALSE])
+        ori_df <- checkColnamesIllegalChars(model$X_input[[b]])
+        vars_data[[b]] <- as.data.frame(ori_df[rownames(model$X$data[[b]]),unique_vars,drop = FALSE])
       }else{
         vars_data[[b]] <- as.data.frame(model$X$data[[b]][,unique_vars,drop = FALSE])
       }
@@ -5216,6 +5509,7 @@ getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = N
     names_qual <- apply(vars_data, 2, function(x){all(x %in% c(0,1))})
     vars_qual <- vars_data[,names_qual,drop = FALSE]
     vars_num <- vars_data[,!names_qual,drop = FALSE]
+    vars_num <- round(vars_num, 10)
 
     if(all(dim(vars_qual)>0)){
       for(cn in colnames(vars_qual)){vars_qual[,cn] <- factor(vars_qual[,cn], levels = c(0, 1))}
@@ -5226,7 +5520,7 @@ getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = N
 
     if(all(dim(vars_num)>0)){
       info_logrank_num <- getLogRank_NumVariables(data = vars_num, sdata = data.frame(model$Y$data),
-                                                  VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+                                                  VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
     }else{
       info_logrank_num <- NULL
     }
@@ -5248,7 +5542,7 @@ getVarKM <- function(model, comp = 1:2, top = 10, ori_data = TRUE, BREAKTIME = N
       }
 
       if(all(dim(vars_num[[b]]))>0){
-        info_logrank_num[[b]] <- getLogRank_NumVariables(data = vars_num[[b]], sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = 0.1, ROUND_CP = 4)
+        info_logrank_num[[b]] <- getLogRank_NumVariables(data = vars_num[[b]], sdata = data.frame(model$Y$data), VAR_EVENT = "event", name_data = NULL, minProp = minProp, ROUND_CP = 5)
       }else{
         info_logrank_num[[b]] <- NULL
       }
@@ -5410,8 +5704,8 @@ getLogRank_QualVariables <- function(data, sdata, VAR_EVENT, name_data = NULL){
   return(LST_QVAR_SIG)
 }
 
-getLogRank_NumVariables <- function(data, sdata, VAR_EVENT, name_data = NULL, minProp = 0.1,
-                                    ROUND_CP = 4){
+getLogRank_NumVariables <- function(data, sdata, VAR_EVENT, name_data = NULL, minProp = 0.2,
+                                    ROUND_CP = 5){
 
   if(is.null(name_data)){
     data <- data
@@ -5433,27 +5727,60 @@ getLogRank_NumVariables <- function(data, sdata, VAR_EVENT, name_data = NULL, mi
     colnames(auxData)[3] <- cn
 
     # Determine the optimal cutpoint for continuous variables, using the maximally selected rank statistics from the 'maxstat' R package.
-    minProp = minProp #we have to establish a minimum number of patients per group in 0-1
+    minProp_ori = minProp #we have to establish a minimum number of patients per group in 0-1
 
-    res.cut <- tryCatch(
-      expr = {
-        survminer::surv_cutpoint(auxData, time="time", event="event", variables = cn, minprop = minProp)
-      },
-      # Specifying error message
-      error = function(e){
-        message(paste0("Problems with variable '",cn,"'", ": ", e))
-        NA
+    ###
+    # FOLDS per surv_cutpoint
+    # if no variation, cannot work
+    ###
+    if(length(unique(sdata[,"event"]))==1){
+      trainIndex <- caret::createFolds(y = sdata[,"time"],
+                                       k = 5, returnTrain = T,
+                                       list = TRUE)
+    }else{
+      trainIndex <- caret::createFolds(y = sdata[,"event"],
+                                       k = 5, returnTrain = T,
+                                       list = TRUE)
+    }
+
+    lst_res.cut <- NULL
+    for(f in 1:length(trainIndex)){
+      res.cut <- NA
+      while(all(is.na(res.cut)) & minProp > 0){
+        res.cut <- tryCatch(
+          expr = {
+            survminer::surv_cutpoint(data = auxData[trainIndex[[f]],,drop=F], time="time", event="event", variables = cn, minprop = minProp)
+          },
+          # Specifying error message
+          error = function(e){
+            message(paste0("Problems with variable '",cn,"'", ": ", e))
+            NA
+          }
+        )
+
+        # Reducir minProp si hubo error
+        if(all(is.na(res.cut))){
+          minProp <- minProp - 0.01
+          message(paste0("minProp updated to: ", minProp, "\n"))
+        }
       }
-    )
+
+      lst_res.cut <- c(lst_res.cut, res.cut$cutpoint[1,1])
+
+    } #for
+    minProp = minProp_ori #update again
+
+    res.cut <- lst_res.cut
+    res.cut <- mean(res.cut)
 
     if(all(is.na(res.cut))){
       next
     }
 
-    if(res.cut$cutpoint[1,1]<=0){
-      cutpoint_value <- round2any(res.cut$cutpoint[1,1], accuracy = 1/(10^ROUND_CP), f = ceiling)
+    if(res.cut<=0){
+      cutpoint_value <- round2any(res.cut, accuracy = 1/(10^ROUND_CP), f = ceiling)
     }else{
-      cutpoint_value <- round(res.cut$cutpoint[1,1], ROUND_CP)
+      cutpoint_value <- round(res.cut, ROUND_CP)
     }
 
     variable <- ifelse(variable>cutpoint_value, paste0("greater than ", cutpoint_value), paste0("lesser/equal than ", cutpoint_value))
@@ -5729,7 +6056,7 @@ plot_survivalplot.qual <- function(data, sdata, cn_variables, name_data = NULL, 
 #' Y_test <- Y_proteomic[-index_train,]
 #' splsicox.model <- splsicox(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
+#' splsdrcox.model <- splsdrcox_penalty(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' lst_results = getAutoKM.list(type = "LP", lst_models)
@@ -5779,26 +6106,38 @@ getCutoffAutoKM <- function(result){
     return(NULL)
   }
 
-  # High dimensional
-  if("df_nvar_lrtest" %in% names(result$info_logrank_num)){
-    value <- result$info_logrank_num$df_nvar_lrtest$Cutoff
-    names(value) <- result$info_logrank_num$df_nvar_lrtest$Variable
-  }else{
-    # MO
-    value <- list()
-    cont = 1
-    for(b in names(result$info_logrank_num)){
-      if(is.null(result$info_logrank_num[[b]]$df_nvar_lrtest)){
-        return(NULL)
+  value <- list()
+  if(!is.null(result$info_logrank_qual)){
+    # Binary Matrix - SO
+    if("Variable" %in% names(result$info_logrank_qual)){
+      value[["qualitative"]] <- result$info_logrank_qual$Variable
+    }else{
+      # MO
+      for(b in names(result$info_logrank_num)){
+        if(is.null(result$info_logrank_num[[b]]$df_nvar_lrtest)){
+          return(NULL)
+        }
+        value[["quantitative"]] <- c(value[["quantitative"]], result$info_logrank_num[[b]]$df_nvar_lrtest$Cutoff)
+        names(value[["quantitative"]]) <- c(names(value[["quantitative"]])[names(value[["quantitative"]]) != ""], paste0(result$info_logrank_num[[b]]$df_nvar_lrtest$Variable, "_", b))
       }
-
-      value[[cont]] <- result$info_logrank_num[[b]]$df_nvar_lrtest$Cutoff
-      names(value[[cont]]) <- paste0(result$info_logrank_num[[b]]$df_nvar_lrtest$Variable, "_", b)
-      cont = cont + 1
     }
+  }
 
-    value <- unlist(value)
+  if(!all(is.null(result$info_logrank_num))){
+    # SO
+    if("Cutoff" %in% names(result$info_logrank_num$df_nvar_lrtest)){
+      value[["quantitative"]] <- result$info_logrank_num$df_nvar_lrtest$Cutoff
+    }else{
+      # MO
+      for(b in names(result$info_logrank_qual)){
+        if(is.null(result$info_logrank_qual[[b]])){
+          return(NULL)
+        }
 
+        value[["qualitative"]] <- c(value[["qualitative"]], result$info_logrank_qual[[b]]$Variable)
+        names(value[["qualitative"]]) <- c(names(value[["qualitative"]])[names(value[["qualitative"]]) != ""], paste0(result$info_logrank_qual[[b]]$Variable, "_", b))
+      }
+    }
   }
 
   return(value)
@@ -5842,17 +6181,17 @@ getCutoffAutoKM <- function(result){
 #' @examples
 #' data("X_proteomic")
 #' data("Y_proteomic")
-#' X_proteomic <- X_proteomic[1:50,]
-#' Y_proteomic <- Y_proteomic[1:50,]
+#' X_proteomic <- X_proteomic[1:30,1:15]
+#' Y_proteomic <- Y_proteomic[1:30,]
 #' set.seed(123)
 #' index_train <- caret::createDataPartition(Y_proteomic$event, p = .5, list = FALSE, times = 1)
-#' X_train <- X_proteomic[index_train,1:20]
+#' X_train <- X_proteomic[index_train,]
 #' Y_train <- Y_proteomic[index_train,]
-#' X_test <- X_proteomic[-index_train,1:20]
+#' X_test <- X_proteomic[-index_train,]
 #' Y_test <- Y_proteomic[-index_train,]
 #' splsicox.model <- splsicox(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
+#' splsdrcox.model <- splsdrcox_penalty(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' lst_results = getAutoKM.list(type = "LP", lst_models)
@@ -5987,7 +6326,14 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
   #### Check test times are less or equal than max train time:
   checkTestTimesVSTrainTimes(model, Y_test)
 
-  if(!isa(model,pkg.env$model_class)){
+  # fix illegal characters for all methods
+  if(class(X_test)[[1]]=="list"){
+    X_test <- checkColnamesIllegalChars.mb(X_test)
+  }else if(all(class(X_test) %in% c("matrix","array", "data.frame"))){
+    X_test <- checkColnamesIllegalChars(X_test)
+  }
+
+  if(!isa(model, pkg.env$model_class)){
     warning("Model must be an object of class Coxmos.")
     warning(model)
     return(NULL)
@@ -5997,13 +6343,9 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
     stop("Type parameters must be one of the following: LP, COMP or VAR")
   }
 
-  if(!is.numeric(cutoff)){
-    message("cutoff parameter must be numeric. Returning NA")
-    return(NA)
-  }
-
+  # BREAKTIMES as TRAIN
   if(is.null(BREAKTIME)){
-    BREAKTIME <- (max(Y_test[,"time"]) - min(Y_test[,"time"])) / n.breaks
+    BREAKTIME <- (max(model$Y$data[,"time"]) - min(model$Y$data[,"time"])) / n.breaks
   }
 
   if(is.null(title)){
@@ -6014,12 +6356,15 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
 
   #create new variable
   if(type=="LP"){
+
+    cutoff <- cutoff$quantitative
+
     #predict scores X_test
     test_score <- predict.Coxmos(object = model, newdata = X_test)
     #predict LP using scores
     test_lp <- predict(model$survival_model$fit, newdata = as.data.frame(test_score))
 
-    if(is.na(cutoff)){
+    if(all(is.na(cutoff))){
       message("Cutoff not found for LP")
       return(NA)
     }
@@ -6042,6 +6387,9 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
     return(ggp)
 
   }else if(type=="COMP"){
+
+    cutoff <- cutoff$quantitative
+
     lst_test_lp <- NULL
     lst_ggp <- NULL
 
@@ -6085,46 +6433,106 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
 
     #As deleteIllegalChars() is performed in KM_VAR, run it always for VAR in TEST
     if(!attr(model, "model") %in% pkg.env$multiblock_methods){
-      new_cn <- deleteIllegalChars(colnames(X_test))
-      colnames(X_test) <- new_cn
+      X_test <- checkColnamesIllegalChars(X_test)
     }else if(isa(X_test, "list")){
-      for(b in names(X_test)){
-        new_cn <- deleteIllegalChars(colnames(X_test[[b]]))
-        colnames(X_test[[b]]) <- new_cn
-      }
+      X_test <- checkColnamesIllegalChars.mb(X_test)
     }
 
-    if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$sb.splsdrcox, pkg.env$isb.splsicox, pkg.env$isb.splsdrcox)){
+    if(attr(model, "model") %in% c(pkg.env$singleblock_methods)){
       lst_ggp <- NULL
-      ## SB.PLSICOX
-      if(attr(model, "model") %in% c(pkg.env$sb.splsicox, pkg.env$isb.splsicox)){
-        for(b in names(model$list_spls_models)){
-          new_cutoff <- cutoff[endsWith(names(cutoff), paste0("_",b))]
+
+      for(b in names(model$list_spls_models)){
+
+        # QUALITATIVE
+        if(all(!is.null(cutoff$qualitative))){
+          new_cutoff <- cutoff$qualitative[endsWith(names(cutoff$qualitative), paste0("_",b))]
           names(new_cutoff) <- unlist(lapply(names(new_cutoff), function(x){substr(x, start = 1, stop = nchar(x)-nchar(paste0("_",b)))}))
-          lst_ggp[[b]] <- getTestKM(model = model$list_spls_models[[b]], X_test = X_test[[b]], Y_test, new_cutoff, type, ori_data, BREAKTIME, n.breaks, title)
+          if(!length(new_cutoff)==0){
+            lst_qual <- list()
+            for(cn in new_cutoff){
+              aux_X_test <- factor(X_test[[b]][,cn], levels = sort(unique(X_test[[b]][,cn])))
+              aux_X_test <- data.frame(aux_X_test)
+              rownames(aux_X_test) <- rownames(X_test)
+              colnames(aux_X_test) <- cn
+              lst_qual[[cn]] <- plot_survivalplot.qual(data = aux_X_test,
+                                                       sdata = data.frame(Y_test),
+                                                       BREAKTIME = BREAKTIME,
+                                                       cn_variables = cn,
+                                                       name_data = NULL, title = title)[[cn]]
+            }
+
+            lst_ggp[[b]] <- lst_qual
+          }
         }
-        return(lst_ggp)
-      }else{
-        ## SB.sPLSDRCOX
-        for(b in names(model$list_spls_models)){
-          new_cutoff <- cutoff[endsWith(names(cutoff), paste0("_",b))]
-          names(new_cutoff) <- unlist(lapply(names(new_cutoff), function(x){substr(x, start = 1, stop = nchar(x)-nchar(paste0("_",b)))}))
-          lst_ggp[[b]] <- getTestKM(model$list_spls_models[[b]], X_test[[b]], Y_test, new_cutoff, type, ori_data, BREAKTIME, n.breaks, title)
+
+        # QUANTITATIVE
+        if(all(!is.null(cutoff$quantitative))){
+          new_cutoff <- NULL
+          new_cutoff$quantitative <- cutoff$quantitative[endsWith(names(cutoff$quantitative), paste0("_",b))]
+          if(!length(new_cutoff$quantitative)==0){
+            names(new_cutoff$quantitative) <- unlist(lapply(names(new_cutoff$quantitative), function(x){substr(x, start = 1, stop = nchar(x)-nchar(paste0("_",b)))}))
+            aux <- getTestKM(model = model$list_spls_models[[b]], X_test = X_test[[b]], Y_test, new_cutoff, type, ori_data, BREAKTIME, n.breaks, title)
+            for(cni in names(aux)){
+              lst_ggp[[b]][[cni]] <- aux[[cni]]
+            }
+          }
         }
-        return(lst_ggp)
       }
-    }else if(attr(model, "model") %in% c(pkg.env$mb.splsdrcox, pkg.env$mb.splsdacox) && isa(X_test, "list")){
+
+      return(lst_ggp)
+
+    }else if(attr(model, "model") %in% c(pkg.env$multiblock_mixomics_methods) && isa(X_test, "list")){
       ## MBs.
       lst_ggp <- NULL
       for(b in names(model$mb.model$X)){
-        new_cutoff <- cutoff[endsWith(names(cutoff), paste0("_",b))]
-        names(new_cutoff) <- unlist(lapply(names(new_cutoff), function(x){substr(x, start = 1, stop = nchar(x)-nchar(paste0("_",b)))}))
-        lst_ggp[[b]] <- getTestKM(model, X_test[[b]], Y_test, new_cutoff, type, ori_data, BREAKTIME, n.breaks, title)
+
+        # QUALITATIVE
+        if(all(!is.null(cutoff$qualitative))){
+          new_cutoff <- cutoff$qualitative[endsWith(names(cutoff$qualitative), paste0("_",b))]
+          names(new_cutoff) <- unlist(lapply(names(new_cutoff), function(x){substr(x, start = 1, stop = nchar(x)-nchar(paste0("_",b)))}))
+          if(!length(new_cutoff)==0){
+            lst_qual <- list()
+            for(cn in new_cutoff){
+              aux_X_test <- factor(X_test[[b]][,cn], levels = sort(unique(X_test[[b]][,cn])))
+              aux_X_test <- data.frame(aux_X_test)
+              rownames(aux_X_test) <- rownames(X_test)
+              colnames(aux_X_test) <- cn
+              lst_qual[[cn]] <- plot_survivalplot.qual(data = aux_X_test,
+                                                       sdata = data.frame(Y_test),
+                                                       BREAKTIME = BREAKTIME,
+                                                       cn_variables = cn,
+                                                       name_data = NULL, title = title)[[cn]]
+            }
+
+            lst_ggp[[b]] <- lst_qual
+          }
+        }
+        # QUANTITATIVE
+        if(all(!is.null(cutoff$quantitative))){
+          new_cutoff <- NULL
+          new_cutoff$quantitative <- cutoff$quantitative[endsWith(names(cutoff$quantitative), paste0("_",b))]
+          if(!length(new_cutoff$quantitative)==0){
+            names(new_cutoff$quantitative) <- unlist(lapply(names(new_cutoff$quantitative), function(x){substr(x, start = 1, stop = nchar(x)-nchar(paste0("_",b)))}))
+            aux <- getTestKM(model = model, X_test = X_test[[b]], Y_test, cutoff = new_cutoff, type, ori_data, BREAKTIME, n.breaks, title)
+            for(cni in names(aux)){
+              lst_ggp[[b]][[cni]] <- aux[[cni]]
+            }
+          }
+        }
       }
       return(lst_ggp)
     }
 
-    X_test <- X_test[,names(cutoff),drop = FALSE]
+    vars <- NULL
+    if(length(cutoff$qualitative)>0){
+      vars <- cutoff$qualitative
+    }
+    if(length(cutoff$quantitative)>0){
+      vars <- names(cutoff$quantitative)
+    }
+
+    X_test <- X_test[,vars,drop = FALSE]
+
     lst_ggp <- NULL
 
     if(!ori_data){
@@ -6143,15 +6551,28 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
 
     for(cn in colnames(X_test)){
 
-        if(is.na(cutoff[[cn]])){
+      if(!is.null(cutoff$qualitative) & cn %in% cutoff$qualitative){
+        aux_X_test <- factor(X_test[,cn], levels = sort(unique(X_test[,cn])))
+        aux_X_test <- data.frame(aux_X_test)
+        rownames(aux_X_test) <- rownames(X_test)
+        colnames(aux_X_test) <- cn
+        lst_ggp[[cn]] <- plot_survivalplot.qual(data = aux_X_test,
+                                                sdata = data.frame(Y_test),
+                                                BREAKTIME = BREAKTIME,
+                                                cn_variables = cn,
+                                                name_data = NULL, title = title)[[cn]]
+        next
+      }
+
+      if(!is.null(cutoff$quantitative) & cn %in% names(cutoff$quantitative)){
+        if(is.na(cutoff$quantitative[[cn]])){
           message(paste0("Cutoff not found for variable: ", cn))
           next
         }
+        txt_greater <- paste0("greater than ", cutoff$quantitative[[cn]])
+        txt_lower <- paste0("lesser/equal than ", cutoff$quantitative[[cn]])
 
-        txt_greater <- paste0("greater than ", cutoff[[cn]])
-        txt_lower <- paste0("lesser/equal than ", cutoff[[cn]])
-
-        LP <- ifelse(X_test[,cn]>cutoff[[cn]], txt_greater, txt_lower)
+        LP <- ifelse(X_test[,cn]>cutoff$quantitative[[cn]], txt_greater, txt_lower)
         LP <- factor(LP)
 
         d <- as.data.frame(LP)
@@ -6162,6 +6583,9 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
                                                 BREAKTIME = BREAKTIME,
                                                 cn_variables = cn,
                                                 name_data = NULL, title = title)[[cn]]
+        next
+      }
+
     }
 
     return(lst_ggp)
@@ -6205,14 +6629,14 @@ getTestKM <- function(model, X_test, Y_test, cutoff, type = "LP", ori_data = TRU
 #' data("X_proteomic")
 #' data("Y_proteomic")
 #' set.seed(123)
-#' index_train <- caret::createDataPartition(Y_proteomic$event, p = .5, list = FALSE, times = 1)
-#' X_train <- X_proteomic[index_train,1:50]
+#' index_train <- caret::createDataPartition(Y_proteomic$event, p = .4, list = FALSE, times = 1)
+#' X_train <- X_proteomic[index_train,1:30]
 #' Y_train <- Y_proteomic[index_train,]
-#' X_test <- X_proteomic[-index_train,1:50]
+#' X_test <- X_proteomic[-index_train,1:30]
 #' Y_test <- Y_proteomic[-index_train,]
-#' splsicox.model <- splsicox(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
+#' splsicox.model <- splsicox(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
-#' splsdrcox.model <- splsdrcox(X_train, Y_train, n.comp = 2, penalty = 0.5, x.center = TRUE,
+#' splsdrcox.model <- splsdrcox_penalty(X_train, Y_train, n.comp = 1, penalty = 0.5, x.center = TRUE,
 #' x.scale = TRUE)
 #' lst_models = list("sPLSICOX" = splsicox.model, "sPLSDRCOX" = splsdrcox.model)
 #' plot_LP.multipleObservations.list(lst_models = lst_models, X_test[1:5,])
@@ -6316,6 +6740,9 @@ plot_classicalcox.comparePatients <- function(model, new_data, error.bar = FALSE
                                               alpha = 0.05, zero.rm = TRUE,
                                               auto.limits = TRUE, top = NULL){
 
+  # norm and fix test data
+  new_data <- checkColnamesIllegalChars(new_data)
+
   #DFCALLS
   value <- patients <- NULL
 
@@ -6346,7 +6773,11 @@ plot_classicalcox.comparePatients <- function(model, new_data, error.bar = FALSE
   }
 
   #lp.new_pat_manual <- norm_patient[,rownames(coefficients)] %*% coefficients #predict lp
-  lp.new_pat_variable <- apply(norm_patient[,deleteIllegalChars(rownames(coefficients)),drop = FALSE], 1, function(x){
+
+  rn_coeff <- deleteIllegalChars(rownames(coefficients))
+  rn_coeff <- transformIllegalChars(rn_coeff)
+
+  lp.new_pat_variable <- apply(norm_patient[,rn_coeff,drop = FALSE], 1, function(x){
     x * coefficients$value #predict terms
   })
 
@@ -6354,7 +6785,10 @@ plot_classicalcox.comparePatients <- function(model, new_data, error.bar = FALSE
   #can be change for cox.prediction(model = model, new_data = patient, time = time, type = type, method = "cox")
   #for each patient on the data frame
 
-  lp.pats <- norm_patient[,deleteIllegalChars(names(model$survival_model$fit$coefficients))] %*% model$survival_model$fit$coefficients
+  rn_coeff <- deleteIllegalChars(names(model$survival_model$fit$coefficients))
+  rn_coeff <- transformIllegalChars(rn_coeff)
+
+  lp.pats <- norm_patient[,rn_coeff] %*% model$survival_model$fit$coefficients
   colnames(lp.pats) <- "linear predictor"
 
   rownames(lp.new_pat_variable) <- rownames(coefficients)
@@ -6433,6 +6867,9 @@ plot_cox.comparePatients <- function(model, new_data, error.bar = FALSE, onlySig
                                      zero.rm = TRUE,
                                      auto.limits = TRUE, top = NULL){
 
+  # norm and fix test data
+  new_data <- checkColnamesIllegalChars(new_data)
+
   #DFCALLS
   value <- patients <- NULL
 
@@ -6471,7 +6908,10 @@ plot_cox.comparePatients <- function(model, new_data, error.bar = FALSE, onlySig
   }
 
   #lp.new_pat_manual <- norm_patient[,rownames(coefficients)] %*% coefficients #predict lp
-  lp.new_pat_variable <- apply(norm_patient[,deleteIllegalChars(rownames(coefficients)),drop = FALSE], 1, function(x){
+  rn_coeff <- deleteIllegalChars(rownames(coefficients))
+  rn_coeff <- transformIllegalChars(rn_coeff)
+
+  lp.new_pat_variable <- apply(norm_patient[,rn_coeff,drop = FALSE], 1, function(x){
     x * coefficients$value #predict terms
   })
 
@@ -6514,6 +6954,9 @@ plot_cox.comparePatients <- function(model, new_data, error.bar = FALSE, onlySig
     auto.limits <- round2any(max(c(abs(sd.max), abs(sd.min), abs(lp.new_pat_variable$value))), accuracy = accuracy, f = ceiling)
   }
 
+  # delete values of 0
+  lp.new_pat_variable <- lp.new_pat_variable[!lp.new_pat_variable$value==0,]
+
   ggp <- ggplot(lp.new_pat_variable[lp.new_pat_variable$lp.flag==FALSE,], aes(x = var, y = value, fill = patients)) +
     geom_bar(stat = "identity", position = "dodge") + xlab(label = "Variables")
   ggp2 <- ggplot(lp.new_pat_variable[lp.new_pat_variable$lp.flag==TRUE,], aes(x = var, y = value, fill = patients)) +
@@ -6554,6 +6997,9 @@ plot_cox.comparePatients <- function(model, new_data, error.bar = FALSE, onlySig
 plot_MB.cox.comparePatients <- function(model, new_data, error.bar = FALSE, onlySig = TRUE, alpha = 0.05,
                                         zero.rm = TRUE,
                                         auto.limits = TRUE, top = NULL){
+
+  # norm and fix test data
+  new_data <- checkColnamesIllegalChars.mb(new_data)
 
   #DFCALLS
   value <- patients <- NULL
@@ -6602,7 +7048,10 @@ plot_MB.cox.comparePatients <- function(model, new_data, error.bar = FALSE, only
     }
 
     #lp.new_pat_manual <- norm_patient[,rownames(coefficients)] %*% coefficients #predict lp
-    lp.new_pat_variable <- apply(norm_patient[,deleteIllegalChars(rownames(coefficients)),drop = FALSE], 1, function(x){
+    rn_coeff <- deleteIllegalChars(rownames(coefficients))
+    rn_coeff <- transformIllegalChars(rn_coeff)
+
+    lp.new_pat_variable <- apply(norm_patient[,rn_coeff,drop = FALSE], 1, function(x){
       x * coefficients$value #predict terms
     })
 

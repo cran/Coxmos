@@ -130,9 +130,16 @@ splitData_Iterations_Folds <- function(X, Y, n_run, k_folds, seed = 123){
   lst_obs_index_test <- list()
 
   for(i in 1:n_run){
-    testIndex <- caret::createFolds(y = Y[,"event"],
-                                    k = k_folds,
-                                    list = TRUE)
+
+    if(length(unique(Y[,"event"]))==1){
+      testIndex <- caret::createFolds(y = Y[,"time"],
+                                       k = k_folds,
+                                       list = TRUE)
+    }else{
+      testIndex <- caret::createFolds(y = Y[,"event"],
+                                       k = k_folds,
+                                       list = TRUE)
+    }
 
     #for each fold, take the others as train
     lst_X_data_train <- lapply(testIndex, function(ind, dat) dat[-ind,,drop = FALSE], dat = X)
@@ -164,7 +171,7 @@ splitData_Iterations_Folds <- function(X, Y, n_run, k_folds, seed = 123){
   return(list(lst_X_train = lst_X_train, lst_Y_train = lst_Y_train, lst_X_test = lst_X_test, lst_Y_test = lst_Y_test, lst_train_index = lst_obs_index_train, lst_test_index = lst_obs_index_test, k_folds = k_folds))
 }
 
-# return a run/fold list where each fold are the indexes to select for train/test wehre train = k-1 folds
+# return a run/fold list where each fold are the indexes to select for train/test where train = k-1 folds
 # and 1 fold of test
 # difference between folds will be 1 fold of patients
 splitData_Iterations_Folds_indexes <- function(Y, n_run, k_folds, seed = 123){
@@ -195,7 +202,7 @@ splitData_Iterations_Folds_indexes <- function(Y, n_run, k_folds, seed = 123){
   for(i in 1:n_run){
 
     if(length(unique(Y[,"event"]))==1){
-      testIndex <- caret::createFolds(y = 1:length(Y[,"event"]),
+      testIndex <- caret::createFolds(y = Y[,"time"],
                                       k = k_folds,
                                       list = TRUE)
     }else{
@@ -413,8 +420,9 @@ getAUC_from_LP_2.0 <- function(linear.predictors, Y, times, bestModel = NULL, me
 
       lst.AUC <- getAUC_vector(output = out, method = method, eval = eval, times = times_run, times.vector = times.vector)
 
+      # AUC_smoothROCtime_C returns time as name in AUC vector
       aux_auc.v <- rep(NA, length(times))
-      aux_auc.v[which(times.vector==TRUE)] <- lst.AUC$AUC.vector
+      aux_auc.v[which(times %in% names(lst.AUC$AUC.vector))] <- lst.AUC$AUC.vector
 
       AUC <- lst.AUC$AUC
       AUC.vector <- aux_auc.v
@@ -435,8 +443,9 @@ getAUC_from_LP_2.0 <- function(linear.predictors, Y, times, bestModel = NULL, me
 
       lst.AUC <- getAUC_vector(output = out, method = method, eval = eval, times = times_run, times.vector = NULL)
 
+      # AUC_smoothROCtime_I returns time as name in AUC vector
       aux_auc.v <- rep(NA, length(times))
-      aux_auc.v[which(times.vector==TRUE)] <- lst.AUC$AUC.vector
+      aux_auc.v[which(times %in% names(lst.AUC$AUC.vector))] <- lst.AUC$AUC.vector
 
       AUC <- lst.AUC$AUC
       AUC.vector <- aux_auc.v
@@ -492,17 +501,13 @@ getAUC_vector <-function(output, method, eval, times = NULL, times.vector = NULL
       AUC <- NA
       AUC.vector <- NA
     }else{
-      subjects <- table(output$t)[[1]]
-      times_used <- as.numeric(unique(output$t))
 
-      index <- NULL
-      for(i in 1:length(times_used)){
-        index <- c(index, 1 + (i-1)*subjects)
-      }
+      unique_index <- which(!duplicated(output$t))
 
-      AUC.vector <- rep(NA, length(times))
-      #AUC.vector[times.vector] <- as.numeric(output$auc[index])
-      AUC.vector <- as.numeric(output$auc[index])
+      AUC.vector <- rep(NA, length(unique_index))
+      AUC.vector <- as.numeric(output$auc[unique_index])
+      names(AUC.vector) <- output$t[unique_index]
+
       AUC <- ifelse(eval=="median", median(AUC.vector, na.rm = TRUE), mean(AUC.vector, na.rm = TRUE))
     }
   }else if(method %in% pkg.env$AUC_nsROC){
@@ -585,7 +590,7 @@ timesAsumption_AUC_Eval <- function(Y, times, method = NULL){
   }
 
   for(t in times){
-    if(!sum(Y[(Y[,"event"]==1 | Y[,"event"]==TRUE),"time"]<=t)<2 & t != 0){
+    if(!sum(Y[(Y[,"event"]==1 | Y[,"event"]==TRUE),"time"]<=t)<2 & t != 0 & max(Y[,"time"])>=t){
       res <- c(res, TRUE)
     }else{
       res <- c(res, FALSE)
@@ -764,11 +769,19 @@ cenROC_tryCatch <- function(Y, censor, M, t, method, ktype, alpha, plot, verbose
     },
     # warning
     warning = function(w){
-      # message(paste0("Problem in time: ", t))
-      # message(paste0("Message: ", w$message))
-      NA
+      message(paste0("Message: ", w$message))
+      if(grep("bw.bcv(M)", w$message, fixed = TRUE)>0 || w$message == "minimum occurred at one end of the range"){
+        cenROC(Y = Y, censor = censor, M = M,
+               t = t, method = method, ktype = ktype, alpha = alpha, plot = plot)
+      }else{
+        message(paste0("Problem in time: ", t))
+        message(paste0("Message: ", w$message))
+        NA
+      }
+
     }
   )))
+
   return(out)
 }
 

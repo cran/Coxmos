@@ -2,10 +2,10 @@
 # METHODS #
 #### ### ##
 
-#' sPLSDA-COX Dynamic
+#' sPLS-DACOX Dynamic
 #' @description
 #' The splsdacox_dynamic function conducts a sparse partial least squares discriminant analysis Cox
-#' (sPLSDA-COX) using dynamic variable selection methodology. This method is particularly useful for
+#' (sPLS-DACOX) using dynamic variable selection methodology. This method is particularly useful for
 #' high-dimensional survival data where the goal is to identify a subset of variables that are most
 #' predictive of survival outcomes. The function integrates the power of sPLSDA with the Cox
 #' proportional hazards model to provide a robust tool for survival analysis in the context of large
@@ -23,8 +23,8 @@
 #' variables and selecting the one that maximizes the model's performance, as determined by the
 #' specified evaluation metric (EVAL_METHOD).
 #'
-#' Once the optimal number of variables is determined, the function proceeds to compute the sPLSDA-COX
-#' model. It employs the mixOmics::splsda function to compute the sPLSDA model, which is then
+#' Once the optimal number of variables is determined, the function proceeds to compute the sPLS-DACOX
+#' model. It employs the mixOmics::splsda function to compute the sPLS-DA model, which is then
 #' integrated with the Cox proportional hazards model. The resulting model provides insights into the
 #' relationship between the predictor variables and survival outcomes.
 #'
@@ -63,8 +63,8 @@
 #' forward selection (default: FALSE).
 #' @param alpha Numeric. Numerical values are regarded as significant if they fall below the
 #' threshold (default: 0.05).
-#' @param EVAL_METHOD Character. If EVAL_METHOD = "AUC", AUC metric will be use to compute the best
-#' number of variables. In other case, c-index metric will be used (default: "AUC").
+#' @param EVAL_METHOD Character. The selected metric will be use to compute the best
+#' number of variables. Must be one of the following: "AUC", "BRIER" or "c_index" (default: "AUC").
 #' @param pred.method Character. AUC evaluation algorithm method for evaluate the model performance.
 #' Must be one of the following: "risksetROC", "survivalROC", "cenROC", "nsROC", "smoothROCtime_C",
 #' "smoothROCtime_I" (default: "cenROC").
@@ -149,11 +149,11 @@
 #' data("Y_proteomic")
 #' X <- X_proteomic[,1:20]
 #' Y <- Y_proteomic
-#' splsdacox_dynamic(X, Y, n.comp = 2, vector = NULL, x.center = TRUE, x.scale = TRUE)
+#' splsdacox(X, Y, n.comp = 2, vector = NULL, x.center = TRUE, x.scale = TRUE)
 
-splsdacox_dynamic <- function (X, Y,
+splsdacox <- function(X, Y,
                                n.comp = 4, vector = NULL,
-                               MIN_NVAR = 10, MAX_NVAR = 1000, n.cut_points = 5,
+                               MIN_NVAR = 10, MAX_NVAR = NULL, n.cut_points = 5,
                                MIN_AUC_INCREASE = 0.01,
                                x.center = TRUE, x.scale = FALSE,
                                remove_near_zero_variance = TRUE, remove_zero_variance = TRUE,
@@ -173,9 +173,14 @@ splsdacox_dynamic <- function (X, Y,
   params_with_limits <- list("alpha" = alpha, "MIN_AUC_INCREASE" = MIN_AUC_INCREASE)
   check_min0_max1_variables(params_with_limits)
 
-  numeric_params <- list("n.comp" = n.comp, "MIN_NVAR" = MIN_NVAR, "MAX_NVAR" = MAX_NVAR, "n.cut_points" = n.cut_points,
+  numeric_params <- list("n.comp" = n.comp, "MIN_NVAR" = MIN_NVAR, "n.cut_points" = n.cut_points,
                   "max_time_points" = max_time_points,
                   "MIN_EPV" = MIN_EPV, "tol" = tol, "max.iter" = max.iter)
+
+  if(!is.null(MAX_NVAR)){
+    numeric_params$MAX_NVAR <- MAX_NVAR
+  }
+
   check_class(numeric_params, class = "numeric")
 
   logical_params <- list("x.center" = x.center, "x.scale" = x.scale,
@@ -192,7 +197,11 @@ splsdacox_dynamic <- function (X, Y,
   X <- lst_check$X
   Y <- lst_check$Y
 
+  #### Check colnames in X for Illegal Chars (affect cox formulas)
+  X <- checkColnamesIllegalChars(X)
+
   #### REQUIREMENTS
+  checkX.colnames(X)
   checkY.colnames(Y)
   lst_check <- checkXY.class(X, Y, verbose = verbose)
   X <- lst_check$X
@@ -231,6 +240,7 @@ splsdacox_dynamic <- function (X, Y,
   X_norm <- Xh
 
   #### MAX PREDICTORS
+  MAX_NVAR <- min(MAX_NVAR, ncol(X))
   n.comp <- check.maxPredictors(X, Y, MIN_EPV, n.comp)
 
   #### ### ### ### ### ### ### ### ### ###
@@ -317,12 +327,45 @@ splsdacox_dynamic <- function (X, Y,
     }
   )
 
+  if(all(is.na(cox_model$fit)) | all(is.null(cox_model$fit))){
+    func_call <- match.call()
+
+    t2 <- Sys.time()
+    time <- difftime(t2,t1,units = "mins")
+
+    survival_model <- NULL
+
+    return(splsdacox_dynamic_class(list(X = list("data" = if(returnData) X_norm else NA,
+                                                 "weightings" = W, #used for computed number of variables, bc mixomics do not put 0 in loadings
+                                                 "W.star" = W.star,
+                                                 "loadings" = P,
+                                                 "scores" = Ts,
+                                                 "x.mean" = xmeans, "x.sd" = xsds),
+                                        Y = list("data" = Yh,
+                                                 "y.mean" = ymeans, "y.sd" = ysds),
+                                        survival_model = survival_model,
+                                        n.comp = n.comp, #number of components
+                                        n.varX = keepX,
+                                        var_by_component = NULL,
+                                        plot_accuracyPerVariable = plotVAR,
+                                        call = if(returnData) func_call else NA,
+                                        X_input = if(returnData) X_original else NA,
+                                        Y_input = if(returnData) Y_original else NA,
+                                        alpha = alpha,
+                                        nsv = NULL,
+                                        nzv = NULL,
+                                        nz_coeffvar = NULL,
+                                        class = pkg.env$splsdacox_dynamic,
+                                        time = time)))
+  }
+
   # RETURN a MODEL with ALL significant Variables from complete, deleting one by one
   removed_variables <- NULL
   removed_variables_cor <- NULL
   # REMOVE NA-PVAL VARIABLES
   # p_val could be NA for some variables (if NA change to P-VAL=1)
   # DO IT ALWAYS, we do not want problems in COX models
+
   if(all(c("time", "event") %in% colnames(d))){
     lst_model <- removeNAorINFcoxmodel(model = cox_model$fit, data = d, time.value = NULL, event.value = NULL)
   }else{
@@ -496,7 +539,7 @@ splsdacox_dynamic <- function (X, Y,
 #' @param toKeep.zv Character vector. Name of variables in X to not be deleted by (near) zero
 #' variance filtering (default: NULL).
 #' @param remove_variance_at_fold_level Logical. If remove_variance_at_fold_level = TRUE, (near)
-#' zero variance will be removed at fold level (default: FALSE).
+#' zero variance will be removed at fold level. Not recommended. (default: FALSE).
 #' @param remove_non_significant_models Logical. If remove_non_significant_models = TRUE,
 #' non-significant models are removed before computing the evaluation.
 #' @param remove_non_significant Logical. If remove_non_significant = TRUE, non-significant
@@ -515,8 +558,8 @@ splsdacox_dynamic <- function (X, Y,
 #' continue evaluating higher values in the multiple tested parameters. If it is not reached for next
 #' 'MIN_COMP_TO_CHECK' models and the minimum 'MIN_AUC' value is reached, the evaluation stops
 #' (default: 0.01).
-#' @param EVAL_METHOD Character. If EVAL_METHOD = "AUC", AUC metric will be use to compute the best
-#' number of variables. In other case, c-index metric will be used (default: "AUC").
+#' @param EVAL_METHOD Character. The selected metric will be use to compute the best
+#' number of variables. Must be one of the following: "AUC", "BRIER" or "c_index" (default: "AUC").
 #' @param pred.method Character. AUC evaluation algorithm method for evaluate the model performance.
 #' Must be one of the following: "risksetROC", "survivalROC", "cenROC", "nsROC", "smoothROCtime_C",
 #' "smoothROCtime_I" (default: "cenROC").
@@ -592,18 +635,18 @@ splsdacox_dynamic <- function (X, Y,
 #' index_train <- caret::createDataPartition(Y_proteomic$event, p = .5, list = FALSE, times = 1)
 #' X_train <- X_proteomic[index_train,1:50]
 #' Y_train <- Y_proteomic[index_train,]
-#' cv.splsdacox_dynamic_model <- cv.splsdacox_dynamic(X_train, Y_train, max.ncomp = 2, vector = NULL,
+#' cv.splsdacox_dynamic_model <- cv.splsdacox(X_train, Y_train, max.ncomp = 2, vector = NULL,
 #' n_run = 1, k_folds = 2, x.center = TRUE, x.scale = TRUE)
 
-cv.splsdacox_dynamic <- function(X, Y,
+cv.splsdacox <- function(X, Y,
                         max.ncomp = 8, vector = NULL,
+                        MIN_NVAR = 10, MAX_NVAR = NULL, n.cut_points = 5,
+                        MIN_AUC_INCREASE = 0.01,
                         n_run = 3, k_folds = 10,
                         x.center = TRUE, x.scale = FALSE,
                         remove_near_zero_variance = TRUE, remove_zero_variance = TRUE, toKeep.zv = NULL,
                         remove_variance_at_fold_level = FALSE,
                         remove_non_significant_models = FALSE, remove_non_significant = FALSE, alpha = 0.05,
-                        MIN_NVAR = 10, MAX_NVAR = 1000, n.cut_points = 5,
-                        MIN_AUC_INCREASE = 0.01,
                         EVAL_METHOD = "AUC",
                         w_AIC = 0, w_c.index = 0, w_AUC = 1, w_BRIER = 0, times = NULL,
                         max_time_points = 15,
@@ -631,9 +674,14 @@ cv.splsdacox_dynamic <- function(X, Y,
                  "w_AIC" = w_AIC, "w_c.index" = w_c.index, "w_AUC" = w_AUC, "w_BRIER" = w_BRIER)
   check_min0_max1_variables(params_with_limits)
 
-  numeric_params <- list("max.ncomp" = max.ncomp, "MIN_NVAR" = MIN_NVAR, "MAX_NVAR" = MAX_NVAR, "n.cut_points" = n.cut_points,
+  numeric_params <- list("max.ncomp" = max.ncomp, "MIN_NVAR" = MIN_NVAR, "n.cut_points" = n.cut_points,
                   "n_run" = n_run, "k_folds" = k_folds, "max_time_points" = max_time_points,
                   "MIN_COMP_TO_CHECK" = MIN_COMP_TO_CHECK, "MIN_EPV" = MIN_EPV, "seed" = seed, "tol" = tol)
+
+  if(!is.null(MAX_NVAR)){
+    numeric_params$MAX_NVAR <- MAX_NVAR
+  }
+
   check_class(numeric_params, class = "numeric")
 
   logical_params <- list("x.center" = x.center, "x.scale" = x.scale,
@@ -662,6 +710,7 @@ cv.splsdacox_dynamic <- function(X, Y,
   X <- checkColnamesIllegalChars(X)
 
   #### REQUIREMENTS
+  checkX.colnames(X)
   checkY.colnames(Y)
   lst_check <- checkXY.class(X, Y, verbose = verbose)
   X <- lst_check$X
@@ -679,7 +728,7 @@ cv.splsdacox_dynamic <- function(X, Y,
   max.ncomp <- check.ncomp(X, max.ncomp)
   max.ncomp <- check.maxPredictors(X, Y, MIN_EPV, max.ncomp, verbose = verbose)
   if(MIN_COMP_TO_CHECK >= max.ncomp){
-    MIN_COMP_TO_CHECK = max.ncomp-1
+    MIN_COMP_TO_CHECK = max(max.ncomp-1, 1)
   }
 
   #### REQUIREMENTS
