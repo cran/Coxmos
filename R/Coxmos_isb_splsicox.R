@@ -257,11 +257,19 @@ isb.splsicox <- function(X, Y,
           survival_model <- cox_model$survival_model
         }
 
+        all_scores <- NULL
+        for(b in names(lst_sb.spls)){
+          aux_scores <- lst_sb.spls[[b]]$X$scores
+          colnames(aux_scores) <- paste0(colnames(aux_scores), "_", b)
+          all_scores <- cbind(all_scores, aux_scores)
+        }
+
         t2 <- Sys.time()
         time <- difftime(t2,t1,units = "mins")
 
         # invisible(gc())
         return(isb.splsicox_class(list(X = list("data" = if(returnData) X_norm else NA,
+                                                "scores" = all_scores,
                                                 "x.mean" = xmeans, "x.sd" = xsds),
                                       Y = list("data" = Yh,
                                                "y.mean" = ymeans, "y.sd" = ysds),
@@ -419,7 +427,7 @@ cv.isb.splsicox <- function(X, Y,
   # tol Numeric. Tolerance for solving: solve(t(P) %*% W) (default: 1e-15).
   tol = 1e-10
 
-  t1 <- Sys.time()
+  t1_true <- Sys.time()
   y.center = y.scale = FALSE
   FREQ_CUT <- 95/5
 
@@ -566,8 +574,8 @@ cv.isb.splsicox <- function(X, Y,
   #### ### #
   func_call <- match.call()
 
-  t2 <- Sys.time()
-  time <- difftime(t2,t1,units = "mins")
+  t2_true <- Sys.time()
+  time <- difftime(t2_true,t1_true,units = "mins")
 
   # invisible(gc())
   return(cv.isb.splsicox_class(list(X = list("data" = if(returnData) X_norm else NA,
