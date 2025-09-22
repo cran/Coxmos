@@ -46,6 +46,7 @@ cv.mb.coxmos(
   return_models = FALSE,
   returnData = FALSE,
   PARALLEL = FALSE,
+  n_cores = NULL,
   verbose = FALSE,
   seed = 123
 )
@@ -154,6 +155,11 @@ cox model (default: 5).}
 
 \item{PARALLEL}{Logical. Run the cross validation with multicore option (default: FALSE).}
 
+\item{n_cores}{Numeric. Number of cores to use for parallel processing. This parameter is only
+used if \code{PARALLEL} is \code{TRUE}. If \code{NULL}, it will use all available cores minus one. Otherwise,
+it will use the minimum between the value specified and the total number of cores - 1. The fewer
+cores used, the less RAM memory will be used.(default: NULL).}
+
 \item{verbose}{Logical. If verbose = TRUE, extra messages could be displayed (default: FALSE).}
 
 \item{seed}{Number. Seed value for performing runs/folds divisions (default: 123).}
@@ -169,11 +175,11 @@ data("X_multiomic")
 data("Y_multiomic")
 set.seed(123)
 X_train <- X_multiomic
-X_train$mirna <- X_train$mirna[1:30,1:30]
-X_train$proteomic <- X_train$proteomic[1:30,1:30]
-Y_train <- Y_multiomic[1:30,]
+X_train$mirna <- X_train$mirna[1:20,1:30]
+X_train$proteomic <- X_train$proteomic[1:20,1:30]
+Y_train <- Y_multiomic[1:20,]
 cv_mb <- cv.mb.coxmos(method = "sb.splsicox", X = X_train, Y = Y_train,
-                     max.ncomp = 1, n_run = 1, k_folds = 3)
+                     max.ncomp = 1, n_run = 1, k_folds = 2)
 }
 \seealso{
 \code{\link{cv.sb.splsicox}} for Single-Block SPLS-ICOX cross-validation,

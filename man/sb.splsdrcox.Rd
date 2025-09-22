@@ -146,6 +146,16 @@ elements:
 
 \code{Y_input}: Y input matrix
 
+\code{R2}: sPLS acumulate R2
+
+\code{SCR}: PLS SCR
+
+\code{SCT}: PLS SCT
+
+\code{alpha}: Significance threshold used.
+
+\code{nsv}: Variables removed due to non-significance.
+
 \code{nzv}: Variables removed by remove_near_zero_variance or remove_zero_variance.
 
 \code{nz_coeffvar}: Variables removed by coefficient variation near zero.
@@ -177,7 +187,7 @@ controls the sparsity of the model, with higher values leading to more variables
 the model. This allows for a balance between model complexity and interpretability.
 
 Data preprocessing options, such as centering and scaling of the explanatory variables and removal
-of near-zero variance variables, are also provided. These preprocessing steps ensure that the data
+of near-zero variability variables, are also provided. These preprocessing steps ensure that the data
 is in a suitable format for the sPLS model and can help improve the stability and performance of
 the analysis.
 

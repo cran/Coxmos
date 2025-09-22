@@ -25,7 +25,7 @@
 #' the model. This allows for a balance between model complexity and interpretability.
 #'
 #' Data preprocessing options, such as centering and scaling of the explanatory variables and removal
-#' of near-zero variance variables, are also provided. These preprocessing steps ensure that the data
+#' of near-zero variability variables, are also provided. These preprocessing steps ensure that the data
 #' is in a suitable format for the sPLS model and can help improve the stability and performance of
 #' the analysis.
 #'
@@ -131,6 +131,16 @@
 #' \code{X_input}: X input matrix
 #'
 #' \code{Y_input}: Y input matrix
+#'
+#' \code{R2}: sPLS acumulate R2
+#'
+#' \code{SCR}: PLS SCR
+#'
+#' \code{SCT}: PLS SCT
+#'
+#' \code{alpha}: Significance threshold used.
+#'
+#' \code{nsv}: Variables removed due to non-significance.
 #'
 #' \code{nzv}: Variables removed by remove_near_zero_variance or remove_zero_variance.
 #'
@@ -343,10 +353,15 @@ sb.splsdrcox <- function(X, Y,
     all_scores <- cbind(all_scores, aux_scores)
   }
 
-  # all_loadings <- list()
-  # for(b in names(lst_sb.spls)){
-  #   all_loadings[[b]] <- lst_sb.spls[[b]]$X$loadings
-  # }
+  # R2
+  R2 <- list()
+  SCR <- list()
+  SCT <- list()
+  for(block in names(lst_sb.spls)){
+    SCR[[block]] <- lst_sb.spls[[block]]$SCR
+    SCT[[block]] <- lst_sb.spls[[block]]$SCT
+    R2[[block]] <- lst_sb.spls[[block]]$R2
+  }
 
   t2 <- Sys.time()
   time <- difftime(t2,t1,units = "mins")
@@ -367,6 +382,9 @@ sb.splsdrcox <- function(X, Y,
                                          call = if(returnData) func_call else NA,
                                          X_input = if(returnData) X_original else NA,
                                          Y_input = if(returnData) Y_original else NA,
+                                         R2 = R2,
+                                         SCR = SCR,
+                                         SCT = SCT,
                                          alpha = alpha,
                                          nsv = removed_variables,
                                          nzv = variablesDeleted,
@@ -407,7 +425,7 @@ sb.splsdrcox <- function(X, Y,
 #' that yield the best performance based on the specified evaluation metrics.
 #'
 #' The function also offers flexibility in data preprocessing, such as centering and scaling of the
-#' explanatory variables, removal of near-zero variance variables, and more. Additionally, users can
+#' explanatory variables, removal of near-zero variability variables, and more. Additionally, users can
 #' specify the AUC evaluation algorithm method (`pred.method`) and control the verbosity of the
 #' output (`verbose`).
 #'
@@ -492,6 +510,10 @@ sb.splsdrcox <- function(X, Y,
 #' @param returnData Logical. Return original and normalized X and Y matrices (default: TRUE).
 #' @param PARALLEL Logical. Run the cross validation with multicore option. As many cores as your
 #' total cores - 1 will be used. It could lead to higher RAM consumption (default: FALSE).
+#' @param n_cores Numeric. Number of cores to use for parallel processing. This parameter is only
+#' used if `PARALLEL` is `TRUE`. If `NULL`, it will use all available cores minus one. Otherwise,
+#' it will use the minimum between the value specified and the total number of cores - 1. The fewer
+#' cores used, the less RAM memory will be used.(default: NULL).
 #' @param verbose Logical. If verbose = TRUE, extra messages could be displayed (default: FALSE).
 #' @param seed Number. Seed value for performing runs/folds divisions (default: 123).
 #'
@@ -558,7 +580,7 @@ cv.sb.splsdrcox <- function(X, Y,
                             pred.attr = "mean", pred.method = "cenROC", fast_mode = FALSE,
                             max.iter = 200,
                             MIN_EPV = 5, return_models = FALSE, returnData = FALSE,
-                            PARALLEL = FALSE, verbose = FALSE, seed = 123){
+                            PARALLEL = FALSE, n_cores = NULL, verbose = FALSE, seed = 123){
   # tol Numeric. Tolerance for solving: solve(t(P) %*% W) (default: 1e-15).
   tol = 1e-10
 
@@ -694,7 +716,7 @@ cv.sb.splsdrcox <- function(X, Y,
                                    remove_non_significant = remove_non_significant, tol = tol,
                                    max.iter = max.iter, times = times, pred.method = pred.method, max_time_points = max_time_points,
                                    returnData = returnData, total_models = total_models,
-                                   PARALLEL = PARALLEL, verbose = verbose)
+                                   PARALLEL = PARALLEL, n_cores = n_cores, verbose = verbose)
 
   #### ### ### ### ### ### #
   # BEST MODEL FOR CV DATA #
@@ -733,7 +755,7 @@ cv.sb.splsdrcox <- function(X, Y,
       times <- getTimesVector(Y, max_time_points = max_time_points)
     }
 
-    #As we are measuring just one evaluator and one method - PARALLEL = FALSE
+    #As we are measuring just one evaluator and one method - PARALLEL = FALSE, n_cores = NULL
     lst_df <- get_COX_evaluation_BRIER(comp_model_lst = lst_model,
                                        fast_mode = fast_mode,
                                        X_test = X, Y_test = Y,
@@ -742,7 +764,7 @@ cv.sb.splsdrcox <- function(X, Y,
                                        pred.method = pred.method, pred.attr = pred.attr,
                                        max.ncomp = max.ncomp, n_run = n_run, k_folds = k_folds,
                                        MIN_AUC_INCREASE = MIN_AUC_INCREASE, MIN_AUC = MIN_AUC, MIN_COMP_TO_CHECK = MIN_COMP_TO_CHECK,
-                                       w_I.BRIER = w_I.BRIER, method.train = pkg.env$sb.splsdrcox_dynamic, PARALLEL = FALSE, verbose = verbose)
+                                       w_I.BRIER = w_I.BRIER, method.train = pkg.env$sb.splsdrcox_dynamic, PARALLEL = FALSE, n_cores = NULL, verbose = verbose)
 
     df_results_evals_comp <- lst_df$df_results_evals_comp
     df_results_evals_run <- lst_df$df_results_evals_run
@@ -769,7 +791,7 @@ cv.sb.splsdrcox <- function(X, Y,
                                      fast_mode = fast_mode, pred.method = pred.method, pred.attr = pred.attr,
                                      max.ncomp = max.ncomp, n_run = n_run, k_folds = k_folds,
                                      MIN_AUC_INCREASE = MIN_AUC_INCREASE, MIN_AUC = MIN_AUC, MIN_COMP_TO_CHECK = MIN_COMP_TO_CHECK,
-                                     w_AUC = w_AUC, method.train = pkg.env$sb.splsdrcox_dynamic, PARALLEL = FALSE, verbose = verbose)
+                                     w_AUC = w_AUC, method.train = pkg.env$sb.splsdrcox_dynamic, PARALLEL = FALSE, n_cores = NULL, verbose = verbose)
 
     if(is.null(df_results_evals_comp)){
       df_results_evals_comp <- lst_df$df_results_evals_comp

@@ -41,6 +41,7 @@ cv.isb.splsdacox(
   return_models = FALSE,
   returnData = FALSE,
   PARALLEL = FALSE,
+  n_cores = NULL,
   verbose = FALSE,
   seed = 123
 )
@@ -73,7 +74,7 @@ For the event column, accepted values are 0/1 or FALSE/TRUE for censored and eve
 
 \item{x.scale}{Logical. If TRUE, the X matrix is scaled to unit variances (default: FALSE).}
 
-\item{remove_near_zero_variance}{Logical. If TRUE, near-zero variance variables are removed (default: TRUE).}
+\item{remove_near_zero_variance}{Logical. If TRUE, near-zero variability variables are removed (default: TRUE).}
 
 \item{remove_zero_variance}{Logical. If TRUE, zero-variance variables are removed (default: TRUE).}
 
@@ -118,6 +119,11 @@ For the event column, accepted values are 0/1 or FALSE/TRUE for censored and eve
 \item{returnData}{Logical. If TRUE, returns original and normalized X and Y matrices (default: FALSE).}
 
 \item{PARALLEL}{Logical. If TRUE, runs cross-validation in parallel using multiple cores (default: FALSE).}
+
+\item{n_cores}{Numeric. Number of cores to use for parallel processing. This parameter is only
+used if \code{PARALLEL} is \code{TRUE}. If \code{NULL}, it will use all available cores minus one. Otherwise,
+it will use the minimum between the value specified and the total number of cores - 1. The fewer
+cores used, the less RAM memory will be used.(default: NULL).}
 
 \item{verbose}{Logical. If TRUE, extra messages are displayed during execution (default: FALSE).}
 

@@ -41,6 +41,7 @@ cv.sb.splsdrcox(
   return_models = FALSE,
   returnData = FALSE,
   PARALLEL = FALSE,
+  n_cores = NULL,
   verbose = FALSE,
   seed = 123
 )
@@ -154,6 +155,11 @@ If the minimum is not meet, the model cannot be computed (default: 5).}
 \item{PARALLEL}{Logical. Run the cross validation with multicore option. As many cores as your
 total cores - 1 will be used. It could lead to higher RAM consumption (default: FALSE).}
 
+\item{n_cores}{Numeric. Number of cores to use for parallel processing. This parameter is only
+used if \code{PARALLEL} is \code{TRUE}. If \code{NULL}, it will use all available cores minus one. Otherwise,
+it will use the minimum between the value specified and the total number of cores - 1. The fewer
+cores used, the less RAM memory will be used.(default: NULL).}
+
 \item{verbose}{Logical. If verbose = TRUE, extra messages could be displayed (default: FALSE).}
 
 \item{seed}{Number. Seed value for performing runs/folds divisions (default: 123).}
@@ -215,7 +221,7 @@ discriminative ability, and calibration. The function then identifies the optima
 that yield the best performance based on the specified evaluation metrics.
 
 The function also offers flexibility in data preprocessing, such as centering and scaling of the
-explanatory variables, removal of near-zero variance variables, and more. Additionally, users can
+explanatory variables, removal of near-zero variability variables, and more. Additionally, users can
 specify the AUC evaluation algorithm method (\code{pred.method}) and control the verbosity of the
 output (\code{verbose}).
 

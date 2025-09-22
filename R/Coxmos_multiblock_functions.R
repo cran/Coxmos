@@ -63,18 +63,18 @@ getEPV.mb <- function(X,Y){
 
 #' deleteZeroOrNearZeroVariance.mb
 #' @description Provides a robust mechanism to filter out variables from a dataset that exhibit zero
-#' or near-zero variance, thereby enhancing the quality and interpretability of subsequent statistical
+#' or near-zero variability, thereby enhancing the quality and interpretability of subsequent statistical
 #' analyses.
 #'
 #' @details The `deleteZeroOrNearZeroVariance` function is an indispensable tool in the preprocessing
 #' phase of statistical modeling. In many datasets, especially high-dimensional ones, certain variables
-#' might exhibit zero or near-zero variance. Such variables can be problematic as they offer limited
+#' might exhibit zero or near-zero variability. Such variables can be problematic as they offer limited
 #' information variance and can potentially distort the results of statistical models, leading to
 #' issues like overfitting. By leveraging the `caret::nearZeroVar()` function, this tool offers a
 #' rigorous method to identify and exclude these variables. Users are afforded flexibility in their
-#' choices, with options to remove only zero variance variables, near-zero variance variables, or
+#' choices, with options to remove only zero variance variables, near-zero variability variables, or
 #' both. The function also provides the capability to set a frequency cutoff, `freqCut`, which
-#' determines the threshold for near-zero variance based on the ratio of the most frequent value to
+#' determines the threshold for near-zero variability based on the ratio of the most frequent value to
 #' the second most frequent value. For scenarios where certain variables are deemed essential and
 #' should not be removed regardless of their variance, the `toKeep.zv` parameter allows users to specify
 #' a list of such variables.
@@ -502,7 +502,7 @@ getCIndex_AUC_CoxModel_block.spls <- function(Xh, DR_coxph_ori, Yh, n.comp, keep
   }
 
   #C-index and AUC
-  lst_AUC_values <- getAUC_from_LP_2.0(linear.predictors = lp, Y = Yh, times = times, bestModel = NULL, eval = "mean", method = EVAL_EVALUATOR, PARALLEL = FALSE, verbose = verbose)
+  lst_AUC_values <- getAUC_from_LP_2.0(linear.predictors = lp, Y = Yh, times = times, bestModel = NULL, eval = "mean", method = EVAL_EVALUATOR, PARALLEL = FALSE, n_cores = NULL, verbose = verbose)
 
   #BRIER
   #lst_BRIER_values <- survAUC_BRIER_LP(lp = lp$fit, Y = Yh, lp_new = lp$fit, Y_test = Yh)
@@ -552,7 +552,7 @@ getCIndex_AUC_CoxModel_block.splsda <- function(Xh, Yh, n.comp, keepX, scale = F
   lp <- getLinealPredictors(cox = cox_model$fit, data = d)
 
   #C-index and AUC
-  lst_AUC_values <- getAUC_from_LP_2.0(linear.predictors = lp, Y = Yh, times = times, bestModel = NULL, eval = "mean", method = EVAL_EVALUATOR, PARALLEL = FALSE, verbose = verbose)
+  lst_AUC_values <- getAUC_from_LP_2.0(linear.predictors = lp, Y = Yh, times = times, bestModel = NULL, eval = "mean", method = EVAL_EVALUATOR, PARALLEL = FALSE, n_cores = NULL, verbose = verbose)
 
   #BRIER
   #lst_BRIER_values <- survAUC_BRIER_LP(lp = lp$fit, Y = Yh, lp_new = lp$fit, Y_test = Yh)
@@ -568,7 +568,7 @@ getVarExpModel_block.spls <- function(Xh, DR_coxph_ori, n.comp, keepX, scale = F
 
 getBestVectorMB <- function(Xh, DR_coxph = NULL, Yh, n.comp, max.iter, vector, MIN_AUC_INCREASE,
                             MIN_NVAR = 1, MAX_NVAR = NULL, cut_points = 5, EVAL_METHOD = "AUC",
-                            EVAL_EVALUATOR = "cenROC", PARALLEL = FALSE, mode = "spls", times = NULL,
+                            EVAL_EVALUATOR = "cenROC", PARALLEL = FALSE, n_cores = NULL, mode = "spls", times = NULL,
                             max_time_points = 15, verbose = FALSE){
 
   if(!mode %in% c("spls", "splsda")){

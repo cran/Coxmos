@@ -11,13 +11,15 @@ plot_sPLS_Coxmos(
   factor = NULL,
   legend_title = NULL,
   top = NULL,
-  only_top = FALSE,
+  only_top = TRUE,
   radius = NULL,
   names = TRUE,
   colorReverse = FALSE,
   text.size = 2,
   overlaps = 10,
-  ellipses = TRUE
+  ellipses = TRUE,
+  scale_loadings = TRUE,
+  scale_scores = TRUE
 )
 }
 \arguments{
@@ -36,7 +38,7 @@ used (default: NULL).}
 \item{top}{Numeric. Show "top" first variables. If top = NULL, all variables are shown (default: NULL).}
 
 \item{only_top}{Logical. If "only_top" = TRUE, then only top/radius loading variables will be
-shown in loading or biplot graph (default: FALSE).}
+shown in loading or biplot graph (default: TRUE).}
 
 \item{radius}{Numeric. Radius size (loading/scale value) to plot variable names that are greater
 than the radius value (default: NULL).}
@@ -51,6 +53,10 @@ size (default: TRUE).}
 \item{overlaps}{Numeric. Number of overlaps to show when plotting loading names. Recommended to be the same as top parameter (default: 10).}
 
 \item{ellipses}{Logical. If "ellipses" = TRUE, then ellipses are created for factor coloring (default: TRUE).}
+
+\item{scale_loadings}{Logical. If "scale_loadings" is set to TRUE, then the loadings are also scaled to the \verb{[-1,1]} range specifically for biplot visualization (default: TRUE).}
+
+\item{scale_scores}{Logical. If "scale_scores" is set to TRUE, then the scores are also scaled to the \verb{[-1,1]} range specifically for biplot visualization (default: TRUE).}
 }
 \value{
 A list of two elements.
